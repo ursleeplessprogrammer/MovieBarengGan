@@ -1,3 +1,4 @@
+
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -7,14 +8,17 @@ import {
   Clock,
   Star,
   Tv,
+  Play,
 } from "lucide-react";
 
 import { Header } from "@/components/header";
+import { VideoPlayer } from "@/components/video-player";
 import {
   getTVEpisodeDetails,
   getTVShowDetails,
   TMDBNotFoundError,
 } from "@/lib/tmdb";
+import { getEpisodeVideoSources } from "@/lib/video-sources";
 
 type EpisodePageProps = {
   params: Promise<{
@@ -64,6 +68,12 @@ export default async function EpisodePage({
     ? `https://image.tmdb.org/t/p/original${episodeData.still_path}`
     : null;
 
+  const videoSources = getEpisodeVideoSources(
+    showId,
+    season,
+    episode
+  );
+
   return (
     <main className="min-h-screen bg-[#090c12] text-white">
       <Header />
@@ -74,11 +84,15 @@ export default async function EpisodePage({
           className="mb-8 inline-flex items-center gap-2 text-sm text-white/45 transition hover:text-[#c7f36b]"
         >
           <ArrowLeft size={15} />
-          Back to {episodeData.season_number === 0 ? "Specials" : `Season ${season}`}
+          Back to{" "}
+          {episodeData.season_number === 0
+            ? "Specials"
+            : `Season ${season}`}
         </Link>
 
         <div className="grid gap-10 lg:grid-cols-[1.5fr_1fr]">
           <div>
+            {/* Episode thumbnail */}
             <div className="relative aspect-video overflow-hidden rounded-2xl border border-white/10 bg-[#171c25]">
               {still ? (
                 <Image
@@ -113,10 +127,41 @@ export default async function EpisodePage({
                 {episodeData.overview ||
                   "No episode description is available."}
               </p>
+
+              {/* Watch Episode */}
+              <div className="mt-8">
+                {videoSources.length > 0 ? (
+                  <VideoPlayer
+                    sources={videoSources}
+                    poster={still ?? undefined}
+                    title={episodeData.name}
+                  />
+                ) : (
+                  <div className="rounded-xl border border-white/10 bg-white/[.03] p-5">
+                    <div className="flex items-center gap-3">
+                      <div className="grid h-10 w-10 place-items-center rounded-full bg-white/[.06] text-white/50">
+                        <Play size={17} />
+                      </div>
+
+                      <div>
+                        <h3 className="text-sm font-bold">
+                          Streaming unavailable
+                        </h3>
+
+                        <p className="mt-1 text-xs text-white/40">
+                          No authorized video source is registered
+                          for this episode.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          <aside className="rounded-2xl border border-white/[.08] bg-[#111620] p-6">
+          {/* Series information */}
+          <aside className="h-fit rounded-2xl border border-white/[.08] bg-[#111620] p-6">
             <div className="relative mx-auto aspect-[2/3] w-full max-w-[190px] overflow-hidden rounded-xl">
               <Image
                 src={showData.show.poster}
@@ -133,13 +178,17 @@ export default async function EpisodePage({
 
             <div className="mt-6 space-y-4 text-sm">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-white/40">Episode rating</span>
+                <span className="text-white/40">
+                  Episode rating
+                </span>
+
                 <span className="flex items-center gap-1 font-bold">
                   <Star
                     size={14}
                     fill="#c7f36b"
                     className="text-[#c7f36b]"
                   />
+
                   {episodeData.vote_average
                     ? episodeData.vote_average.toFixed(1)
                     : "N/A"}
@@ -148,6 +197,7 @@ export default async function EpisodePage({
 
               <div className="flex items-center justify-between gap-3">
                 <span className="text-white/40">Air date</span>
+
                 <span className="flex items-center gap-1 font-semibold">
                   <CalendarDays size={14} />
                   {episodeData.air_date || "N/A"}
@@ -156,8 +206,10 @@ export default async function EpisodePage({
 
               <div className="flex items-center justify-between gap-3">
                 <span className="text-white/40">Runtime</span>
+
                 <span className="flex items-center gap-1 font-semibold">
                   <Clock size={14} />
+
                   {episodeData.runtime
                     ? `${episodeData.runtime} min`
                     : "N/A"}
