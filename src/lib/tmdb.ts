@@ -463,7 +463,12 @@ export async function getTVShowDetails(id: number): Promise<{
   show: TVShow;
   seasons: TMDBSeason[];
   creators: { id: number; name: string }[];
-  cast: TMDBTVDetails["credits"]["cast"];
+  cast: {
+    id: number;
+    name: string;
+    character: string;
+    profile_path?: string | null;
+  }[];
   trailer: string | null;
   recommendations: TVShow[];
   totalEpisodes: number;
