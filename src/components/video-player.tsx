@@ -1,8 +1,10 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 import {
   AlertCircle,
+  ExternalLink,
   LoaderCircle,
   Play,
   RefreshCw,
@@ -26,11 +28,13 @@ export function VideoPlayer({
   );
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     setSelectedSourceId(sources[0]?.id ?? "");
-    setHasError(false);
     setIsLoading(true);
+    setHasError(false);
+    setReloadKey(0);
   }, [sources]);
 
   const selectedSource =
@@ -39,19 +43,28 @@ export function VideoPlayer({
 
   function selectSource(source: VideoSource) {
     setSelectedSourceId(source.id);
-    setHasError(false);
     setIsLoading(true);
+    setHasError(false);
+    setReloadKey((previous) => previous + 1);
+  }
+
+  function retrySource() {
+    setIsLoading(true);
+    setHasError(false);
+    setReloadKey((previous) => previous + 1);
   }
 
   if (!selectedSource) {
     return (
       <div className="flex aspect-video w-full flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#11151d] text-center">
         <AlertCircle size={36} className="mb-4 text-[#c7f36b]" />
+
         <h2 className="text-lg font-bold text-white">
           Streaming unavailable
         </h2>
+
         <p className="mt-2 max-w-sm text-sm text-white/50">
-          There are currently no configured video sources for this title.
+          No video sources are currently available for this title.
         </p>
       </div>
     );
@@ -59,10 +72,10 @@ export function VideoPlayer({
 
   return (
     <div className="space-y-4">
-      {/* Server selection */}
+      {/* Source selection */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="mr-1 text-sm font-semibold text-white/60">
-          Servers:
+          Sources:
         </span>
 
         {sources.map((source) => {
@@ -86,7 +99,7 @@ export function VideoPlayer({
         })}
       </div>
 
-      {/* Player */}
+      {/* Video player */}
       <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black">
         {isLoading && !hasError && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#090b10]">
@@ -94,6 +107,7 @@ export function VideoPlayer({
               size={34}
               className="animate-spin text-[#c7f36b]"
             />
+
             <p className="mt-3 text-sm text-white/60">
               Loading {selectedSource.name}...
             </p>
@@ -103,28 +117,40 @@ export function VideoPlayer({
         {hasError ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#11151d] px-6 text-center">
             <AlertCircle size={34} className="mb-3 text-red-400" />
+
             <h2 className="text-lg font-bold text-white">
               Unable to load this source
             </h2>
-            <p className="mt-2 text-sm text-white/50">
-              Try another server or retry this source.
+
+            <p className="mt-2 max-w-sm text-sm text-white/50">
+              The provider may have restricted external playback or
+              the video source may be unavailable.
             </p>
 
-            <button
-              type="button"
-              onClick={() => {
-                setHasError(false);
-                setIsLoading(true);
-              }}
-              className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#c7f36b] px-5 py-2.5 text-sm font-bold text-[#10140a]"
-            >
-              <RefreshCw size={14} />
-              Retry
-            </button>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <button
+                type="button"
+                onClick={retrySource}
+                className="inline-flex items-center gap-2 rounded-full bg-[#c7f36b] px-5 py-2.5 text-sm font-bold text-[#10140a]"
+              >
+                <RefreshCw size={14} />
+                Retry
+              </button>
+
+              <a
+                href={selectedSource.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-white"
+              >
+                <ExternalLink size={14} />
+                Open source
+              </a>
+            </div>
           </div>
         ) : selectedSource.kind === "mp4" ? (
           <video
-            key={selectedSource.id}
+            key={`${selectedSource.id}-${reloadKey}`}
             controls
             playsInline
             preload="metadata"
@@ -143,10 +169,10 @@ export function VideoPlayer({
           </video>
         ) : (
           <iframe
-            key={selectedSource.id}
+            key={`${selectedSource.id}-${reloadKey}`}
             src={selectedSource.url}
             title={`${title} - ${selectedSource.name}`}
-            allow="autoplay; fullscreen; picture-in-picture"
+            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
             allowFullScreen
             referrerPolicy="strict-origin-when-cross-origin"
             onLoad={() => setIsLoading(false)}
@@ -155,7 +181,7 @@ export function VideoPlayer({
         )}
       </div>
 
-      {/* Source attribution */}
+      {/* Source information */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-white/40">
         <span>
           Source: {selectedSource.name} · {selectedSource.attribution}
