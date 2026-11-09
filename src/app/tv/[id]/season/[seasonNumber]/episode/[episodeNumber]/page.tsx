@@ -1,4 +1,3 @@
-
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -8,42 +7,39 @@ import {
   Clock,
   Star,
   Tv,
-  Play,
 } from "lucide-react";
 
 import { Header } from "@/components/header";
-import { VideoPlayer } from "@/components/video-player";
 import {
   getTVEpisodeDetails,
   getTVShowDetails,
   TMDBNotFoundError,
 } from "@/lib/tmdb";
-import { getEpisodeVideoSources } from "@/lib/video-sources";
 
 type EpisodePageProps = {
   params: Promise<{
     id: string;
-    season: string;
-    episode: string;
+    seasonNumber: string;
+    episodeNumber: string;
   }>;
 };
 
-export default async function WatchEpisodePage({
+export default async function EpisodePage({
   params,
 }: EpisodePageProps) {
-  const { id, season, episode } = await params;
+  const { id, seasonNumber, episodeNumber } = await params;
 
   const showId = Number(id);
-  const seasonNumber = Number(season);
-  const episodeNumber = Number(episode);
+  const season = Number(seasonNumber);
+  const episode = Number(episodeNumber);
 
   if (
     !Number.isSafeInteger(showId) ||
     showId <= 0 ||
-    !Number.isSafeInteger(seasonNumber) ||
-    seasonNumber < 0 ||
-    !Number.isSafeInteger(episodeNumber) ||
-    episodeNumber <= 0
+    !Number.isSafeInteger(season) ||
+    season < 0 ||
+    !Number.isSafeInteger(episode) ||
+    episode <= 0
   ) {
     notFound();
   }
@@ -54,7 +50,7 @@ export default async function WatchEpisodePage({
   try {
     [showData, episodeData] = await Promise.all([
       getTVShowDetails(showId),
-      getTVEpisodeDetails(showId, seasonNumber, episodeNumber),
+      getTVEpisodeDetails(showId, season, episode),
     ]);
   } catch (error) {
     if (error instanceof TMDBNotFoundError) {
@@ -66,34 +62,23 @@ export default async function WatchEpisodePage({
 
   const still = episodeData.still_path
     ? `https://image.tmdb.org/t/p/original${episodeData.still_path}`
-    : undefined;
-
-  const videoSources = getEpisodeVideoSources(
-    showId,
-    seasonNumber,
-    episodeNumber
-  );
+    : null;
 
   return (
     <main className="min-h-screen bg-[#090c12] text-white">
       <Header />
 
       <section className="page-shell pb-20 pt-32">
-        {/* Back navigation */}
         <Link
-          href={`/tv/${showId}/season/${seasonNumber}`}
+          href={`/tv/${showId}/season/${season}`}
           className="mb-8 inline-flex items-center gap-2 text-sm text-white/45 transition hover:text-[#c7f36b]"
         >
           <ArrowLeft size={15} />
-          Back to{" "}
-          {episodeData.season_number === 0
-            ? "Specials"
-            : `Season ${seasonNumber}`}
+          Back to {episodeData.season_number === 0 ? "Specials" : `Season ${season}`}
         </Link>
 
         <div className="grid gap-10 lg:grid-cols-[1.5fr_1fr]">
           <div>
-            {/* Episode thumbnail */}
             <div className="relative aspect-video overflow-hidden rounded-2xl border border-white/10 bg-[#171c25]">
               {still ? (
                 <Image
@@ -111,7 +96,6 @@ export default async function WatchEpisodePage({
               )}
             </div>
 
-            {/* Episode details */}
             <div className="mt-7">
               <p className="text-xs font-bold tracking-[0.15em] text-[#c7f36b]">
                 {showData.show.name.toUpperCase()}
@@ -122,48 +106,17 @@ export default async function WatchEpisodePage({
               </h1>
 
               <p className="mt-3 text-sm text-white/45">
-                Season {seasonNumber} · Episode {episodeNumber}
+                Season {season} · Episode {episode}
               </p>
 
               <p className="mt-6 text-sm leading-7 text-white/60">
                 {episodeData.overview ||
                   "No episode description is available."}
               </p>
-
-              {/* Video player */}
-              <div className="mt-8">
-                {videoSources.length > 0 ? (
-                  <VideoPlayer
-                    sources={videoSources}
-                    poster={still}
-                    title={episodeData.name}
-                  />
-                ) : (
-                  <div className="rounded-xl border border-white/10 bg-white/[.03] p-5">
-                    <div className="flex items-center gap-3">
-                      <div className="grid h-10 w-10 place-items-center rounded-full bg-white/[.06] text-white/50">
-                        <Play size={17} />
-                      </div>
-
-                      <div>
-                        <h3 className="text-sm font-bold">
-                          Streaming unavailable
-                        </h3>
-
-                        <p className="mt-1 text-xs text-white/40">
-                          No authorized video source is registered
-                          for this episode.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
 
-          {/* Series information */}
-          <aside className="h-fit rounded-2xl border border-white/[.08] bg-[#111620] p-6">
+          <aside className="rounded-2xl border border-white/[.08] bg-[#111620] p-6">
             <div className="relative mx-auto aspect-[2/3] w-full max-w-[190px] overflow-hidden rounded-xl">
               <Image
                 src={showData.show.poster}
@@ -180,17 +133,13 @@ export default async function WatchEpisodePage({
 
             <div className="mt-6 space-y-4 text-sm">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-white/40">
-                  Episode rating
-                </span>
-
+                <span className="text-white/40">Episode rating</span>
                 <span className="flex items-center gap-1 font-bold">
                   <Star
                     size={14}
                     fill="#c7f36b"
                     className="text-[#c7f36b]"
                   />
-
                   {episodeData.vote_average
                     ? episodeData.vote_average.toFixed(1)
                     : "N/A"}
@@ -199,7 +148,6 @@ export default async function WatchEpisodePage({
 
               <div className="flex items-center justify-between gap-3">
                 <span className="text-white/40">Air date</span>
-
                 <span className="flex items-center gap-1 font-semibold">
                   <CalendarDays size={14} />
                   {episodeData.air_date || "N/A"}
@@ -208,10 +156,8 @@ export default async function WatchEpisodePage({
 
               <div className="flex items-center justify-between gap-3">
                 <span className="text-white/40">Runtime</span>
-
                 <span className="flex items-center gap-1 font-semibold">
                   <Clock size={14} />
-
                   {episodeData.runtime
                     ? `${episodeData.runtime} min`
                     : "N/A"}
