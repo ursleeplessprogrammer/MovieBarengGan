@@ -184,17 +184,12 @@ MovieBarengGan is not affiliated with, endorsed by, or officially associated wit
 
 Streaming functionality depends on separately configured video sources. Only content that is legally authorized for distribution should be used.
 
-## 👨‍💻 Developer
-
-**Ivan Vincent Kwenandar**
-
-- GitHub: [@ursleeplessprogrammer](https://github.com/ursleeplessprogrammer)
-- Project: [MovieBarengGan](https://github.com/ursleeplessprogrammer/MovieBarengGan)
-
 ---
 
-<p align="center">
-  <strong>MovieBarengGan · MBG</strong>
-  <br />
-  Movies are better together. 🍿
-</p>
+## 📄 License
+
+Please refer to the repository for applicable licensing information.
+
+## 👨‍💻 Author
+
+**ursleeplessprogrammer**
