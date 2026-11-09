@@ -1,3 +1,4 @@
+
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -16,6 +17,7 @@ import {
   getMoviePageData,
   TMDBNotFoundError,
 } from "@/lib/tmdb";
+import { getMovieVideoSource } from "@/lib/video-sources";
 import { notFound } from "next/navigation";
 
 type MoviePageProps = {
@@ -45,6 +47,7 @@ export default async function MoviePage({ params }: MoviePageProps) {
   }
 
   const { movie, director, cast, trailerUrl, recommendations } = data;
+  const videoSource = getMovieVideoSource(movieId);
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#090c12] text-white">
@@ -136,21 +139,33 @@ export default async function MoviePage({ params }: MoviePageProps) {
                   <span className="block text-[10px] font-bold tracking-[0.15em] text-white/30">
                     DIRECTOR
                   </span>
+
                   <span className="mt-1 block font-semibold text-white/85">
                     {director}
                   </span>
                 </div>
               </div>
 
+              {/* Movie actions */}
               <div className="mt-9 flex flex-wrap gap-3">
+                {videoSource && (
+                  <Link
+                    href={`/watch/movie/${movie.id}`}
+                    className="inline-flex items-center gap-2 rounded-full bg-[#c7f36b] px-6 py-3.5 text-sm font-black text-[#10140a] transition hover:bg-[#d8ff83]"
+                  >
+                    <Play size={16} fill="currentColor" />
+                    Watch Movie
+                  </Link>
+                )}
+
                 {trailerUrl ? (
                   <a
                     href={trailerUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-full bg-[#c7f36b] px-6 py-3.5 text-sm font-black text-[#10140a] transition hover:bg-[#d8ff83]"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.06] px-6 py-3.5 text-sm font-bold text-white transition hover:border-[#c7f36b]/50 hover:text-[#c7f36b]"
                   >
-                    <Play size={16} fill="currentColor" />
+                    <Play size={16} />
                     Watch trailer
                     <ArrowUpRight size={15} />
                   </a>
@@ -169,6 +184,12 @@ export default async function MoviePage({ params }: MoviePageProps) {
                   + Add to watchlist
                 </button>
               </div>
+
+              {!videoSource && (
+                <p className="mt-3 text-xs text-white/35">
+                  Streaming is currently unavailable for this title.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -181,6 +202,7 @@ export default async function MoviePage({ params }: MoviePageProps) {
             <p className="text-xs font-bold tracking-[0.2em] text-[#c7f36b]">
               THE PEOPLE BEHIND IT
             </p>
+
             <h2 className="mt-2 text-2xl font-black sm:text-3xl">
               Cast & Crew
             </h2>
@@ -218,6 +240,7 @@ export default async function MoviePage({ params }: MoviePageProps) {
                   <h3 className="truncate text-sm font-bold">
                     {person.name}
                   </h3>
+
                   <p className="mt-1 truncate text-xs text-white/40">
                     {person.character || "Cast member"}
                   </p>
@@ -239,9 +262,11 @@ export default async function MoviePage({ params }: MoviePageProps) {
             <p className="text-xs font-bold tracking-[0.2em] text-[#c7f36b]">
               KEEP DISCOVERING
             </p>
+
             <h2 className="mt-2 text-2xl font-black sm:text-3xl">
               You Might Also Like
             </h2>
+
             <p className="mt-2 text-sm text-white/40">
               More movies selected based on this title.
             </p>
