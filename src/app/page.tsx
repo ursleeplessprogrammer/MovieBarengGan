@@ -166,7 +166,7 @@ export default async function HomePage() {
           </h2>
 
           <p className="mt-2 text-sm text-white/45">
-            Movies everyone's talking about.
+            Movies everyone&apos;s talking about.
           </p>
         </div>
 
