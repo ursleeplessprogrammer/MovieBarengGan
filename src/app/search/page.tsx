@@ -1,5 +1,4 @@
 
-import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -121,7 +120,7 @@ export default async function SearchPage({
               Something went wrong
             </h2>
             <p className="mt-2 text-sm text-white/45">
-              We couldn't retrieve movie results. Please try again.
+              We couldn&apos;t retrieve movie results. Please try again.
             </p>
           </div>
         ) : !query ? (
