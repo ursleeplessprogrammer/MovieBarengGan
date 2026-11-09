@@ -15,23 +15,17 @@ interface TMDBMovie {
   genre_ids: number[];
 }
 
-const genreMap: Record<number, string> = {
-  28: "Action",
-  12: "Adventure",
-  16: "Animation",
-  35: "Comedy",
-  80: "Crime",
-  99: "Documentary",
-  18: "Drama",
-  10751: "Family",
-  14: "Fantasy",
-  27: "Horror",
-  9648: "Mystery",
-  10749: "Romance",
-  878: "Sci-Fi",
-  53: "Thriller",
-  10752: "War",
-};
+interface TMDBMovieDetails extends TMDBMovie {
+  runtime: number | null;
+  genres: {
+    id: number;
+    name: string;
+  }[];
+}
+
+interface TMDBResponse<T> {
+  results: T[];
+}
 
 async function fetchTMDB<T>(endpoint: string): Promise<T> {
   const token = process.env.TMDB_API_READ_ACCESS_TOKEN;
@@ -45,60 +39,104 @@ async function fetchTMDB<T>(endpoint: string): Promise<T> {
       Authorization: `Bearer ${token}`,
       accept: "application/json",
     },
-    next: { revalidate: 3600 },
+    next: {
+      revalidate: 3600,
+    },
   });
 
   if (!response.ok) {
-    throw new Error(`TMDB request failed: ${response.status}`);
+    throw new Error(`TMDB API error: ${response.status}`);
   }
 
   return response.json();
 }
 
-function mapMovie(movie: TMDBMovie): Movie {
+function formatRuntime(runtime: number | null): string {
+  if (!runtime) return "N/A";
+
+  const hours = Math.floor(runtime / 60);
+  const minutes = runtime % 60;
+
+  return hours > 0
+    ? `${hours}h ${String(minutes).padStart(2, "0")}m`
+    : `${minutes}m`;
+}
+
+function mapMovie(
+  movie: TMDBMovie,
+  genres?: TMDBMovieDetails["genres"],
+  runtime?: number | null
+): Movie {
   return {
-    id: String(movie.id),
+    id: movie.id,
     title: movie.title,
     year: movie.release_date
       ? Number(movie.release_date.slice(0, 4))
       : 0,
-    genre:
-      movie.genre_ids
-        .map((id) => genreMap[id])
-        .filter(Boolean)
-        .slice(0, 2)
-        .join(" · ") || "Movie",
     rating: movie.vote_average.toFixed(1),
+    genre: genres
+      ? genres.map((genre) => genre.name).slice(0, 2).join(" · ")
+      : movie.genre_ids.slice(0, 2).map(getGenreName).join(" · "),
+    runtime: formatRuntime(runtime ?? null),
     poster: movie.poster_path
       ? `${TMDB_IMAGE_URL}/w500${movie.poster_path}`
       : "/placeholder-poster.png",
     backdrop: movie.backdrop_path
       ? `${TMDB_IMAGE_URL}/original${movie.backdrop_path}`
       : "",
-    tag: undefined,
+    description:
+      movie.overview || "No description available for this movie.",
   };
 }
 
-export async function getPopularMovies(): Promise<Movie[]> {
-  const data = await fetchTMDB<{ results: TMDBMovie[] }>(
-    "/movie/popular?language=en-US&page=1"
-  );
+function getGenreName(id: number): string {
+  const genres: Record<number, string> = {
+    28: "Action",
+    12: "Adventure",
+    16: "Animation",
+    35: "Comedy",
+    80: "Crime",
+    99: "Documentary",
+    18: "Drama",
+    10751: "Family",
+    14: "Fantasy",
+    36: "History",
+    27: "Horror",
+    10402: "Music",
+    9648: "Mystery",
+    10749: "Romance",
+    878: "Sci-Fi",
+    10770: "TV Movie",
+    53: "Thriller",
+    10752: "War",
+    37: "Western",
+  };
 
-  return data.results.map(mapMovie);
+  return genres[id] ?? "Other";
+}
+
+async function getMovieList(endpoint: string): Promise<Movie[]> {
+  const data = await fetchTMDB<TMDBResponse<TMDBMovie>>(endpoint);
+
+  return data.results.map((movie) => mapMovie(movie));
+}
+
+export async function getPopularMovies(): Promise<Movie[]> {
+  return getMovieList("/movie/popular?language=en-US&page=1");
 }
 
 export async function getTrendingMovies(): Promise<Movie[]> {
-  const data = await fetchTMDB<{ results: TMDBMovie[] }>(
-    "/trending/movie/week?language=en-US"
-  );
-
-  return data.results.map(mapMovie);
+  return getMovieList("/trending/movie/week?language=en-US");
 }
 
 export async function getTopRatedMovies(): Promise<Movie[]> {
-  const data = await fetchTMDB<{ results: TMDBMovie[] }>(
-    "/movie/top_rated?language=en-US&page=1"
+  return getMovieList("/movie/top_rated?language=en-US&page=1");
+}
+
+export async function getMovieDetails(id: number): Promise<Movie> {
+  const movie = await fetchTMDB<TMDBMovieDetails>(
+    `/movie/${id}?language=en-US`
   );
 
-  return data.results.map(mapMovie);
+  return mapMovie(movie, movie.genres, movie.runtime);
 }
