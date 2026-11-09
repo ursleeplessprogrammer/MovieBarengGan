@@ -1,12 +1,15 @@
 
 import Link from "next/link";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { Header } from "@/components/header";
 import { VideoPlayer } from "@/components/video-player";
-import { getMoviePageData, TMDBNotFoundError } from "@/lib/tmdb";
-import { getMovieVideoSource } from "@/lib/video-sources";
+import {
+  getMoviePageData,
+  TMDBNotFoundError,
+} from "@/lib/tmdb";
+import { getMovieVideoSources } from "@/lib/video-sources";
 
 type WatchMoviePageProps = {
   params: Promise<{
@@ -20,11 +23,11 @@ export default async function WatchMoviePage({
   const { id } = await params;
   const movieId = Number(id);
 
-  if (!Number.isInteger(movieId) || movieId <= 0) {
+  if (!Number.isSafeInteger(movieId) || movieId <= 0) {
     notFound();
   }
 
-  let movieData;
+  let movieData: Awaited<ReturnType<typeof getMoviePageData>>;
 
   try {
     movieData = await getMoviePageData(movieId);
@@ -37,13 +40,15 @@ export default async function WatchMoviePage({
   }
 
   const { movie } = movieData;
-  const videoSource = getMovieVideoSource(movieId);
+
+  const videoSources = getMovieVideoSources(movieId);
 
   return (
     <main className="min-h-screen bg-[#090c12] text-white">
       <Header />
 
       <section className="page-shell pb-20 pt-32">
+        {/* Back navigation */}
         <Link
           href={`/movie/${movieId}`}
           className="mb-7 inline-flex items-center gap-2 text-sm text-white/60 transition hover:text-[#c7f36b]"
@@ -52,6 +57,7 @@ export default async function WatchMoviePage({
           Back to movie details
         </Link>
 
+        {/* Movie information */}
         <div className="mb-5">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#c7f36b]">
             Now playing
@@ -66,46 +72,61 @@ export default async function WatchMoviePage({
           </p>
         </div>
 
-        <VideoPlayer
-          src={videoSource?.url ?? ""}
-          poster={movie.backdrop || movie.poster}
-          title={movie.title}
-        />
+        {/* Video player */}
+        {videoSources.length > 0 ? (
+          <VideoPlayer
+            sources={videoSources}
+            poster={movie.backdrop || movie.poster}
+            title={movie.title}
+          />
+        ) : (
+          <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#111620]">
+            <div className="relative aspect-video">
+              {movie.backdrop || movie.poster ? (
+                <div
+                  className="absolute inset-0 bg-cover bg-center opacity-25 blur-sm"
+                  style={{
+                    backgroundImage: `url("${movie.backdrop || movie.poster}")`,
+                  }}
+                />
+              ) : null}
 
-        {videoSource && (
-          <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.03] p-4">
-            <p className="text-sm font-bold text-white">
-              Video attribution
-            </p>
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 px-6 text-center">
+                <div className="grid h-14 w-14 place-items-center rounded-full bg-white/[.08] text-white/60">
+                  <ArrowLeft size={22} />
+                </div>
 
-            <p className="mt-2 text-sm text-white/60">
-              {videoSource.attribution}
-            </p>
+                <h2 className="mt-5 text-lg font-bold">
+                  Streaming unavailable
+                </h2>
 
-            <p className="mt-1 text-xs text-white/40">
-              License: {videoSource.license}
-            </p>
-
-            <a
-              href={videoSource.sourcePage}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-3 inline-flex items-center gap-2 text-xs font-bold text-[#c7f36b] hover:underline"
-            >
-              View license information
-              <ExternalLink size={13} />
-            </a>
+                <p className="mt-2 max-w-md text-sm leading-6 text-white/45">
+                  No authorized video source is currently registered
+                  for this movie. Please check back later.
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
+        {/* Movie description */}
         <div className="mt-8 max-w-3xl">
-          <h2 className="text-lg font-bold">About this movie</h2>
+          <h2 className="text-lg font-bold">
+            About this movie
+          </h2>
 
           <p className="mt-3 text-sm leading-7 text-white/55">
             {movie.description}
           </p>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t border-white/[.07] py-8">
+        <div className="page-shell text-center text-xs text-white/30">
+          Movie information and images provided by TMDB.
+        </div>
+      </footer>
     </main>
   );
 }
