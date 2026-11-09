@@ -231,3 +231,42 @@ export async function getMoviePageData(
     recommendations,
   };
 }
+
+export async function searchMovies(
+  query: string,
+  page = 1,
+): Promise<{
+  movies: Movie[];
+  totalPages: number;
+  totalResults: number;
+}> {
+  const trimmedQuery = query.trim();
+
+  if (!trimmedQuery) {
+    return {
+      movies: [],
+      totalPages: 0,
+      totalResults: 0,
+    };
+  }
+
+  const params = new URLSearchParams({
+    query: trimmedQuery,
+    language: "en-US",
+    page: String(Math.max(1, page)),
+    include_adult: "false",
+  });
+
+  const data = await fetchTMDB<
+    TMDBResponse<TMDBMovie> & {
+      total_pages: number;
+      total_results: number;
+    }
+  >(`/search/movie?${params.toString()}`);
+
+  return {
+    movies: data.results.map((movie) => mapMovie(movie)),
+    totalPages: data.total_pages,
+    totalResults: data.total_results,
+  };
+}

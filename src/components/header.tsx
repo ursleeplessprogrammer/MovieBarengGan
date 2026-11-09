@@ -6,6 +6,7 @@ export function Header() {
   return (
     <header className="absolute inset-x-0 top-0 z-30">
       <div className="page-shell flex h-[82px] items-center justify-between border-b border-white/10">
+        {/* Logo */}
         <Link href="/" className="flex items-center gap-3">
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#c7f36b] text-[#11150b]">
             <Clapperboard size={21} />
@@ -17,30 +18,37 @@ export function Header() {
           </span>
         </Link>
 
+        {/* Desktop Navigation */}
         <nav className="hidden items-center gap-8 text-sm font-semibold text-white/65 md:flex">
           <Link href="/" className="text-white">
             Home
           </Link>
-          <a className="transition hover:text-white" href="#movies">
+
+          <Link href="/#movies" className="transition hover:text-white">
             Movies
-          </a>
-          <a className="transition hover:text-white" href="#collections">
+          </Link>
+
+          <Link href="/#collections" className="transition hover:text-white">
             Collections
-          </a>
-          <a className="transition hover:text-white" href="#about">
+          </Link>
+
+          <Link href="/#about" className="transition hover:text-white">
             About
-          </a>
+          </Link>
         </nav>
 
+        {/* Header Actions */}
         <div className="flex items-center gap-3">
-          <a
-            href="#movies"
+          {/* Search */}
+          <Link
+            href="/search"
             aria-label="Search movies"
-            className="grid h-10 w-10 place-items-center rounded-full border border-white/10 text-white/75 transition hover:bg-white/10"
+            className="grid h-10 w-10 place-items-center rounded-full border border-white/10 text-white/75 transition hover:bg-white/10 hover:text-[#c7f36b]"
           >
             <Search size={18} />
-          </a>
+          </Link>
 
+          {/* Sign In */}
           <Link
             href="/login"
             className="hidden items-center gap-2 rounded-full bg-white px-4 py-2.5 text-xs font-extrabold text-black transition hover:bg-[#c7f36b] sm:flex"
@@ -49,7 +57,9 @@ export function Header() {
             Sign in
           </Link>
 
+          {/* Mobile Menu */}
           <button
+            type="button"
             aria-label="Open menu"
             className="grid h-10 w-10 place-items-center rounded-full border border-white/10 md:hidden"
           >
