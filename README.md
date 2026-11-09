@@ -1,6 +1,6 @@
 # 🎬 MovieBarengGan (MBG)
 
-<img width="511" height="482" alt="image" src="https://github.com/user-attachments/assets/7c239407-4322-4a14-818d-e4677469b04a" />
+<img width="100%" height="100%" alt="image" src="https://github.com/user-attachments/assets/7c239407-4322-4a14-818d-e4677469b04a" />
 
 <p align="center">
   <strong>Movies are better together.</strong>
