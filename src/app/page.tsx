@@ -15,22 +15,44 @@ import {
 
 import { Header } from "@/components/header";
 import { MovieCard } from "@/components/movie-card";
-import { featuredMovie, movies, publicDomainNote } from "@/lib/movies";
+import { getPopularMovies, getTrendingMovies } from "@/lib/tmdb";
+import { publicDomainNote } from "@/lib/movies";
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Retrieve movie data from TMDB
+  const [popularMovies, trendingMovies] = await Promise.all([
+    getPopularMovies(),
+    getTrendingMovies(),
+  ]);
+
+  // Use the first trending movie as the hero movie
+  const featuredMovie = trendingMovies[0] ?? popularMovies[0];
+
+  // Handle empty API responses
+  if (!featuredMovie) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#0b0e13] text-white">
+        <p>Unable to load movies. Please try again later.</p>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen overflow-hidden">
       <Header />
 
+      {/* HERO SECTION */}
       <section className="relative min-h-[720px]">
-        <Image
-          src={featuredMovie.backdrop}
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover object-center opacity-65"
-        />
+        {featuredMovie.backdrop && (
+          <Image
+            src={featuredMovie.backdrop}
+            alt={`${featuredMovie.title} backdrop`}
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center opacity-65"
+          />
+        )}
 
         <div className="hero-overlay absolute inset-0" />
 
@@ -42,7 +64,7 @@ export default function HomePage() {
             </div>
 
             <p className="eyebrow mb-4">
-              {featuredMovie.tag}{" "}
+              {featuredMovie.tag || "TRENDING NOW"}{" "}
               <span className="mx-2 text-white/30">/</span> FEATURED STORY
             </p>
 
@@ -56,15 +78,24 @@ export default function HomePage() {
                 <Star size={14} fill="currentColor" />
                 {featuredMovie.rating}
               </span>
-              <span>{featuredMovie.year}</span>
+
+              <span>{featuredMovie.year || "N/A"}</span>
+
               <span className="h-1 w-1 rounded-full bg-white/35" />
-              <span>{featuredMovie.genre}</span>
-              <span className="h-1 w-1 rounded-full bg-white/35" />
-              <span>{featuredMovie.runtime}</span>
+
+              <span>{featuredMovie.genre || "Various Genres"}</span>
+
+              {featuredMovie.runtime && (
+                <>
+                  <span className="h-1 w-1 rounded-full bg-white/35" />
+                  <span>{featuredMovie.runtime}</span>
+                </>
+              )}
             </div>
 
             <p className="mt-6 max-w-[510px] text-sm leading-7 text-white/65 sm:text-base">
-              {featuredMovie.description}
+              {featuredMovie.description ||
+                "Discover your next favorite movie with MovieBarengGan."}
             </p>
 
             <div className="mt-9 flex flex-wrap gap-3">
@@ -93,14 +124,17 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* POPULAR MOVIES */}
       <section className="page-shell -mt-2 pb-16" id="movies">
         <div className="mb-7 flex items-end justify-between gap-4">
           <div>
             <p className="eyebrow mb-2">HANDPICKED FOR YOU</p>
+
             <h2 className="text-3xl font-black tracking-tight sm:text-4xl">
               Explore the collection
               <span className="text-[#c7f36b]">.</span>
             </h2>
+
             <p className="mt-2 text-sm text-white/45">
               Stories worth staying in for.
             </p>
@@ -115,15 +149,39 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4 xl:grid-cols-8">
-          {movies.map((movie) => (
+          {popularMovies.map((movie) => (
             <MovieCard key={movie.id} movie={movie} />
           ))}
         </div>
       </section>
 
+      {/* TRENDING MOVIES */}
+      <section className="page-shell pb-20">
+        <div className="mb-7">
+          <p className="eyebrow mb-2">POPULAR RIGHT NOW</p>
+
+          <h2 className="text-3xl font-black tracking-tight sm:text-4xl">
+            Trending this week
+            <span className="text-[#c7f36b]">.</span>
+          </h2>
+
+          <p className="mt-2 text-sm text-white/45">
+            Movies everyone's talking about.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4 xl:grid-cols-8">
+          {trendingMovies.map((movie) => (
+            <MovieCard key={movie.id} movie={movie} />
+          ))}
+        </div>
+      </section>
+
+      {/* COLLECTIONS */}
       <section id="collections" className="page-shell pb-20">
         <div className="mb-7">
           <p className="eyebrow mb-2">PICK YOUR MOOD</p>
+
           <h2 className="text-3xl font-black tracking-tight">
             Find your kind of story
             <span className="text-[#c7f36b]">.</span>
@@ -167,10 +225,14 @@ export default function HomePage() {
               className={`group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br ${item.tone} to-[#11151d] p-6 transition hover:-translate-y-1 hover:border-[#c7f36b]/40`}
             >
               <item.icon className="mb-10 text-[#c7f36b]" size={23} />
+
               <p className="text-xl font-black">{item.name}</p>
+
               <p className="mt-1 text-xs text-white/45">{item.desc}</p>
+
               <p className="mt-5 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-white/35">
                 <span>{item.count}</span>
+
                 <ArrowUpRight
                   size={16}
                   className="transition group-hover:text-[#c7f36b]"
@@ -181,6 +243,7 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ABOUT MBG */}
       <section id="about" className="page-shell pb-24">
         <div className="relative overflow-hidden rounded-3xl border border-[#c7f36b]/20 bg-[#121a14] p-8 sm:p-12">
           <div className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-[#c7f36b]/10 blur-3xl" />
@@ -212,6 +275,7 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* FOOTER */}
       <footer className="border-t border-white/10 py-8">
         <div className="page-shell flex flex-col justify-between gap-4 text-xs text-white/40 sm:flex-row sm:items-center">
           <p>
