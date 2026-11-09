@@ -24,7 +24,7 @@ export function Header() {
             Home
           </Link>
 
-          <Link href="/#movies" className="transition hover:text-white">
+          <Link href="/discover" className="transition hover:text-white">
             Movies
           </Link>
 

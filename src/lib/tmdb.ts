@@ -270,3 +270,56 @@ export async function searchMovies(
     totalResults: data.total_results,
   };
 }
+
+export type TMDBGenre = {
+  id: number;
+  name: string;
+};
+
+export async function getMovieGenres(): Promise<TMDBGenre[]> {
+  const data = await fetchTMDB<{
+    genres: TMDBGenre[];
+  }>("/genre/movie/list?language=en-US");
+
+  return data.genres;
+}
+
+export async function discoverMovies(
+  genreId?: number,
+  year?: number,
+  sortBy = "popularity.desc",
+  page = 1,
+): Promise<{
+  movies: Movie[];
+  totalPages: number;
+  totalResults: number;
+}> {
+  const params = new URLSearchParams({
+    language: "en-US",
+    page: String(Math.max(1, page)),
+    sort_by: sortBy,
+    include_adult: "false",
+    include_video: "false",
+  });
+
+  if (genreId) {
+    params.set("with_genres", String(genreId));
+  }
+
+  if (year) {
+    params.set("primary_release_year", String(year));
+  }
+
+  const data = await fetchTMDB<
+    TMDBResponse<TMDBMovie> & {
+      total_pages: number;
+      total_results: number;
+    }
+  >(`/discover/movie?${params.toString()}`);
+
+  return {
+    movies: data.results.map((movie) => mapMovie(movie)),
+    totalPages: data.total_pages,
+    totalResults: data.total_results,
+  };
+}
