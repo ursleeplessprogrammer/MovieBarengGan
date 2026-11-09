@@ -23,27 +23,27 @@ import { getEpisodeVideoSources } from "@/lib/video-sources";
 type EpisodePageProps = {
   params: Promise<{
     id: string;
-    seasonNumber: string;
-    episodeNumber: string;
+    season: string;
+    episode: string;
   }>;
 };
 
-export default async function EpisodePage({
+export default async function WatchEpisodePage({
   params,
 }: EpisodePageProps) {
-  const { id, seasonNumber, episodeNumber } = await params;
+  const { id, season, episode } = await params;
 
   const showId = Number(id);
-  const season = Number(seasonNumber);
-  const episode = Number(episodeNumber);
+  const seasonNumber = Number(season);
+  const episodeNumber = Number(episode);
 
   if (
     !Number.isSafeInteger(showId) ||
     showId <= 0 ||
-    !Number.isSafeInteger(season) ||
-    season < 0 ||
-    !Number.isSafeInteger(episode) ||
-    episode <= 0
+    !Number.isSafeInteger(seasonNumber) ||
+    seasonNumber < 0 ||
+    !Number.isSafeInteger(episodeNumber) ||
+    episodeNumber <= 0
   ) {
     notFound();
   }
@@ -54,7 +54,7 @@ export default async function EpisodePage({
   try {
     [showData, episodeData] = await Promise.all([
       getTVShowDetails(showId),
-      getTVEpisodeDetails(showId, season, episode),
+      getTVEpisodeDetails(showId, seasonNumber, episodeNumber),
     ]);
   } catch (error) {
     if (error instanceof TMDBNotFoundError) {
@@ -66,12 +66,12 @@ export default async function EpisodePage({
 
   const still = episodeData.still_path
     ? `https://image.tmdb.org/t/p/original${episodeData.still_path}`
-    : null;
+    : undefined;
 
   const videoSources = getEpisodeVideoSources(
     showId,
-    season,
-    episode
+    seasonNumber,
+    episodeNumber
   );
 
   return (
@@ -79,15 +79,16 @@ export default async function EpisodePage({
       <Header />
 
       <section className="page-shell pb-20 pt-32">
+        {/* Back navigation */}
         <Link
-          href={`/tv/${showId}/season/${season}`}
+          href={`/tv/${showId}/season/${seasonNumber}`}
           className="mb-8 inline-flex items-center gap-2 text-sm text-white/45 transition hover:text-[#c7f36b]"
         >
           <ArrowLeft size={15} />
           Back to{" "}
           {episodeData.season_number === 0
             ? "Specials"
-            : `Season ${season}`}
+            : `Season ${seasonNumber}`}
         </Link>
 
         <div className="grid gap-10 lg:grid-cols-[1.5fr_1fr]">
@@ -110,6 +111,7 @@ export default async function EpisodePage({
               )}
             </div>
 
+            {/* Episode details */}
             <div className="mt-7">
               <p className="text-xs font-bold tracking-[0.15em] text-[#c7f36b]">
                 {showData.show.name.toUpperCase()}
@@ -120,7 +122,7 @@ export default async function EpisodePage({
               </h1>
 
               <p className="mt-3 text-sm text-white/45">
-                Season {season} · Episode {episode}
+                Season {seasonNumber} · Episode {episodeNumber}
               </p>
 
               <p className="mt-6 text-sm leading-7 text-white/60">
@@ -128,12 +130,12 @@ export default async function EpisodePage({
                   "No episode description is available."}
               </p>
 
-              {/* Watch Episode */}
+              {/* Video player */}
               <div className="mt-8">
                 {videoSources.length > 0 ? (
                   <VideoPlayer
                     sources={videoSources}
-                    poster={still ?? undefined}
+                    poster={still}
                     title={episodeData.name}
                   />
                 ) : (
