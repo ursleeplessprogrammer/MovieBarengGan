@@ -17,7 +17,7 @@ import {
   getMoviePageData,
   TMDBNotFoundError,
 } from "@/lib/tmdb";
-import { getMovieVideoSource } from "@/lib/video-sources";
+import { getMovieVideoSources } from "@/lib/video-sources";
 import { notFound } from "next/navigation";
 
 type MoviePageProps = {
@@ -47,7 +47,7 @@ export default async function MoviePage({ params }: MoviePageProps) {
   }
 
   const { movie, director, cast, trailerUrl, recommendations } = data;
-  const videoSource = getMovieVideoSource(movieId);
+  const videoSources = getMovieVideoSources(movieId);
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#090c12] text-white">
@@ -148,7 +148,7 @@ export default async function MoviePage({ params }: MoviePageProps) {
 
               {/* Movie actions */}
               <div className="mt-9 flex flex-wrap gap-3">
-                {videoSource && (
+                {videoSources.length > 0 && (
                   <Link
                     href={`/watch/movie/${movie.id}`}
                     className="inline-flex items-center gap-2 rounded-full bg-[#c7f36b] px-6 py-3.5 text-sm font-black text-[#10140a] transition hover:bg-[#d8ff83]"
@@ -185,7 +185,7 @@ export default async function MoviePage({ params }: MoviePageProps) {
                 </button>
               </div>
 
-              {!videoSource && (
+              {videoSources.length === 0 && (
                 <p className="mt-3 text-xs text-white/35">
                   Streaming is currently unavailable for this title.
                 </p>

@@ -18,7 +18,7 @@ import {
   getTVShowDetails,
   TMDBNotFoundError,
 } from "@/lib/tmdb";
-import { getEpisodeVideoSource } from "@/lib/video-sources";
+import { getEpisodeVideoSources } from "@/lib/video-sources";
 
 type EpisodePageProps = {
   params: Promise<{
@@ -68,7 +68,7 @@ export default async function EpisodePage({
     ? `https://image.tmdb.org/t/p/original${episodeData.still_path}`
     : null;
 
-  const videoSource = getEpisodeVideoSource(
+  const videoSources = getEpisodeVideoSources(
     showId,
     season,
     episode
@@ -84,7 +84,10 @@ export default async function EpisodePage({
           className="mb-8 inline-flex items-center gap-2 text-sm text-white/45 transition hover:text-[#c7f36b]"
         >
           <ArrowLeft size={15} />
-          Back to {episodeData.season_number === 0 ? "Specials" : `Season ${season}`}
+          Back to{" "}
+          {episodeData.season_number === 0
+            ? "Specials"
+            : `Season ${season}`}
         </Link>
 
         <div className="grid gap-10 lg:grid-cols-[1.5fr_1fr]">
@@ -127,37 +130,12 @@ export default async function EpisodePage({
 
               {/* Watch Episode */}
               <div className="mt-8">
-                {videoSource ? (
-                  <div className="space-y-5">
-                    <VideoPlayer
-                      src={videoSource.url}
-                      poster={still ?? undefined}
-                      title={episodeData.name}
-                    />
-
-                    <div className="rounded-xl border border-white/10 bg-white/[.03] p-4">
-                      <p className="text-sm font-bold">
-                        Video attribution
-                      </p>
-
-                      <p className="mt-2 text-sm text-white/60">
-                        {videoSource.attribution}
-                      </p>
-
-                      <p className="mt-1 text-xs text-white/40">
-                        License: {videoSource.license}
-                      </p>
-
-                      <a
-                        href={videoSource.sourcePage}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-3 inline-block text-xs font-bold text-[#c7f36b] hover:underline"
-                      >
-                        View license information
-                      </a>
-                    </div>
-                  </div>
+                {videoSources.length > 0 ? (
+                  <VideoPlayer
+                    sources={videoSources}
+                    poster={still ?? undefined}
+                    title={episodeData.name}
+                  />
                 ) : (
                   <div className="rounded-xl border border-white/10 bg-white/[.03] p-5">
                     <div className="flex items-center gap-3">
@@ -171,7 +149,8 @@ export default async function EpisodePage({
                         </h3>
 
                         <p className="mt-1 text-xs text-white/40">
-                          No authorized video source is registered for this episode.
+                          No authorized video source is registered
+                          for this episode.
                         </p>
                       </div>
                     </div>
@@ -199,7 +178,9 @@ export default async function EpisodePage({
 
             <div className="mt-6 space-y-4 text-sm">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-white/40">Episode rating</span>
+                <span className="text-white/40">
+                  Episode rating
+                </span>
 
                 <span className="flex items-center gap-1 font-bold">
                   <Star
