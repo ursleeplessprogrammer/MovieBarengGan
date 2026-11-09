@@ -1,4 +1,3 @@
-
 import type { Movie } from "@/lib/movies";
 
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
@@ -12,26 +11,69 @@ interface TMDBMovie {
   backdrop_path: string | null;
   release_date: string;
   vote_average: number;
-  genre_ids: number[];
-}
-
-interface TMDBMovieDetails extends TMDBMovie {
-  runtime: number | null;
-  genres: {
-    id: number;
-    name: string;
-  }[];
+  genre_ids?: number[];
+  genres?: { id: number; name: string }[];
+  runtime?: number | null;
 }
 
 interface TMDBResponse<T> {
   results: T[];
 }
 
+interface TMDBCastMember {
+  id: number;
+  name: string;
+  character: string;
+  profile_path: string | null;
+}
+
+interface TMDBCrewMember {
+  id: number;
+  name: string;
+  job: string;
+}
+
+interface TMDBVideo {
+  key: string;
+  name: string;
+  site: string;
+  type: string;
+  official: boolean;
+}
+
+interface TMDBMovieDetails extends TMDBMovie {
+  runtime: number | null;
+  genres: { id: number; name: string }[];
+  credits: {
+    cast: TMDBCastMember[];
+    crew: TMDBCrewMember[];
+  };
+  videos: {
+    results: TMDBVideo[];
+  };
+  recommendations: TMDBResponse<TMDBMovie>;
+}
+
+export interface MoviePageData {
+  movie: Movie;
+  director: string;
+  cast: TMDBCastMember[];
+  trailerUrl: string | null;
+  recommendations: Movie[];
+}
+
+export class TMDBNotFoundError extends Error {
+  constructor() {
+    super("Movie not found.");
+    this.name = "TMDBNotFoundError";
+  }
+}
+
 async function fetchTMDB<T>(endpoint: string): Promise<T> {
   const token = process.env.TMDB_API_READ_ACCESS_TOKEN;
 
   if (!token) {
-    throw new Error("TMDB API token is missing.");
+    throw new Error("TMDB API token is missing. Check your .env.local file.");
   }
 
   const response = await fetch(`${TMDB_BASE_URL}${endpoint}`, {
@@ -44,49 +86,28 @@ async function fetchTMDB<T>(endpoint: string): Promise<T> {
     },
   });
 
+  if (response.status === 404) {
+    throw new TMDBNotFoundError();
+  }
+
   if (!response.ok) {
-    throw new Error(`TMDB API error: ${response.status}`);
+    throw new Error(`TMDB API request failed: ${response.status}`);
   }
 
   return response.json();
 }
 
-function formatRuntime(runtime: number | null): string {
+function formatRuntime(runtime: number | null | undefined): string {
   if (!runtime) return "N/A";
 
   const hours = Math.floor(runtime / 60);
   const minutes = runtime % 60;
 
-  return hours > 0
-    ? `${hours}h ${String(minutes).padStart(2, "0")}m`
-    : `${minutes}m`;
-}
+  if (hours > 0) {
+    return `${hours}h ${String(minutes).padStart(2, "0")}m`;
+  }
 
-function mapMovie(
-  movie: TMDBMovie,
-  genres?: TMDBMovieDetails["genres"],
-  runtime?: number | null
-): Movie {
-  return {
-    id: movie.id,
-    title: movie.title,
-    year: movie.release_date
-      ? Number(movie.release_date.slice(0, 4))
-      : 0,
-    rating: movie.vote_average.toFixed(1),
-    genre: genres
-      ? genres.map((genre) => genre.name).slice(0, 2).join(" · ")
-      : movie.genre_ids.slice(0, 2).map(getGenreName).join(" · "),
-    runtime: formatRuntime(runtime ?? null),
-    poster: movie.poster_path
-      ? `${TMDB_IMAGE_URL}/w500${movie.poster_path}`
-      : "/placeholder-poster.png",
-    backdrop: movie.backdrop_path
-      ? `${TMDB_IMAGE_URL}/original${movie.backdrop_path}`
-      : "",
-    description:
-      movie.overview || "No description available for this movie.",
-  };
+  return `${minutes}m`;
 }
 
 function getGenreName(id: number): string {
@@ -115,6 +136,34 @@ function getGenreName(id: number): string {
   return genres[id] ?? "Other";
 }
 
+function mapMovie(
+  movie: TMDBMovie,
+  runtime?: number | null,
+): Movie {
+  const genreNames = movie.genres
+    ? movie.genres.map((genre) => genre.name)
+    : (movie.genre_ids ?? []).map(getGenreName);
+
+  return {
+    id: movie.id,
+    title: movie.title,
+    year: movie.release_date
+      ? Number(movie.release_date.slice(0, 4))
+      : 0,
+    rating: Number(movie.vote_average ?? 0).toFixed(1),
+    genre: genreNames.slice(0, 2).join(" · ") || "Uncategorized",
+    runtime: formatRuntime(runtime ?? movie.runtime),
+    poster: movie.poster_path
+      ? `${TMDB_IMAGE_URL}/w500${movie.poster_path}`
+      : "/placeholder-poster.svg",
+    backdrop: movie.backdrop_path
+      ? `${TMDB_IMAGE_URL}/original${movie.backdrop_path}`
+      : "",
+    description:
+      movie.overview || "No description available for this movie.",
+  };
+}
+
 async function getMovieList(endpoint: string): Promise<Movie[]> {
   const data = await fetchTMDB<TMDBResponse<TMDBMovie>>(endpoint);
 
@@ -135,8 +184,50 @@ export async function getTopRatedMovies(): Promise<Movie[]> {
 
 export async function getMovieDetails(id: number): Promise<Movie> {
   const movie = await fetchTMDB<TMDBMovieDetails>(
-    `/movie/${id}?language=en-US`
+    `/movie/${id}?language=en-US`,
   );
 
-  return mapMovie(movie, movie.genres, movie.runtime);
+  return mapMovie(movie, movie.runtime);
+}
+
+export async function getMoviePageData(
+  id: number,
+): Promise<MoviePageData> {
+  const details = await fetchTMDB<TMDBMovieDetails>(
+    `/movie/${id}?language=en-US&append_to_response=credits,videos,recommendations`,
+  );
+
+  const director =
+    details.credits?.crew.find((member) => member.job === "Director")
+      ?.name ?? "Unknown";
+
+  const cast = (details.credits?.cast ?? []).slice(0, 12);
+
+  const trailer = (details.videos?.results ?? []).find(
+    (video) =>
+      video.site === "YouTube" &&
+      video.type === "Trailer" &&
+      video.official,
+  ) ?? (details.videos?.results ?? []).find(
+    (video) =>
+      video.site === "YouTube" &&
+      video.type === "Trailer",
+  );
+
+  const recommendations = (
+    details.recommendations?.results ?? []
+  )
+    .filter((movie) => movie.poster_path)
+    .slice(0, 12)
+    .map((movie) => mapMovie(movie));
+
+  return {
+    movie: mapMovie(details, details.runtime),
+    director,
+    cast,
+    trailerUrl: trailer
+      ? `https://www.youtube.com/watch?v=${trailer.key}`
+      : null,
+    recommendations,
+  };
 }

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="750" viewBox="0 0 500 750">
+  <rect width="500" height="750" fill="#171c25"></rect>
+  <rect x="1" y="1" width="498" height="748" rx="12" fill="none" stroke="#343b48" stroke-width="2"></rect>
+  <g fill="none" stroke="#c7f36b" stroke-width="8" opacity=".8">
+    <rect x="205" y="300" width="90" height="110" rx="8"></rect>
+    <path d="M235 330l40 25-40 25z" fill="#c7f36b" stroke="none"></path>
+  </g>
+  <text x="250" y="465" text-anchor="middle" fill="#c7f36b" font-family="Arial,sans-serif" font-size="22" font-weight="bold">MBG</text>
+  <text x="250" y="500" text-anchor="middle" fill="#89919e" font-family="Arial,sans-serif" font-size="14">NO POSTER AVAILABLE</text>
+</svg>
