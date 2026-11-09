@@ -2,6 +2,7 @@
 
 <img width="100%" height="100%" alt="image" src="https://github.com/user-attachments/assets/7c239407-4322-4a14-818d-e4677469b04a" />
 
+<br>
 <p align="center">
   <strong>Movies are better together.</strong>
 </p>
@@ -19,6 +20,8 @@
 Inspired by modern streaming platforms, MBG combines a cinematic interface with movie browsing, detailed information, search functionality, and an integrated video player experience.
 
 The project aims to provide a comfortable and intuitive experience for exploring movies and TV shows, discovering new titles, and accessing available streaming sources.
+
+Project link: https://movie-bareng-gan.vercel.app/
 
 ## ✨ Features
 
