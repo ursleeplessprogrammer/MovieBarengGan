@@ -28,6 +28,10 @@ export function Header() {
             Movies
           </Link>
 
+          <Link href="/tv" className="transition hover:text-white">
+            TV Shows
+          </Link>
+
           <Link href="/#collections" className="transition hover:text-white">
             Collections
           </Link>

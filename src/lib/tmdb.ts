@@ -323,3 +323,211 @@ export async function discoverMovies(
     totalResults: data.total_results,
   };
 }
+
+
+// ==========================================
+// TV SHOW TYPES
+// ==========================================
+
+export type TVShow = {
+  id: number;
+  name: string;
+  year: number;
+  rating: string;
+  genre: string;
+  poster: string;
+  backdrop: string;
+  description: string;
+  status: string;
+  seasons: number;
+};
+
+export type TMDBTVShow = {
+  id: number;
+  name: string;
+  first_air_date?: string;
+  vote_average?: number;
+  genre_ids?: number[];
+  genres?: { id: number; name: string }[];
+  poster_path?: string | null;
+  backdrop_path?: string | null;
+  overview?: string;
+  status?: string;
+  number_of_seasons?: number;
+  seasons?: TMDBSeason[];
+};
+
+export type TMDBSeason = {
+  id: number;
+  name: string;
+  season_number: number;
+  episode_count: number;
+  air_date?: string | null;
+  poster_path?: string | null;
+  overview?: string;
+};
+
+export type TMDBEpisode = {
+  id: number;
+  name: string;
+  episode_number: number;
+  season_number: number;
+  air_date?: string | null;
+  overview?: string;
+  still_path?: string | null;
+  vote_average?: number;
+  runtime?: number | null;
+};
+
+export type TMDBTVDetails = TMDBTVShow & {
+  genres: { id: number; name: string }[];
+  seasons: TMDBSeason[];
+  created_by?: { id: number; name: string }[];
+  credits?: {
+    cast: {
+      id: number;
+      name: string;
+      character: string;
+      profile_path?: string | null;
+    }[];
+  };
+  videos?: {
+    results: {
+      key: string;
+      site: string;
+      type: string;
+      official: boolean;
+    }[];
+  };
+  recommendations?: {
+    results: TMDBTVShow[];
+  };
+  number_of_episodes?: number;
+};
+
+export type TMDBEpisodeDetails = TMDBEpisode & {
+  still_path?: string | null;
+  overview: string;
+};
+
+function mapTVShow(show: TMDBTVShow): TVShow {
+  return {
+    id: show.id,
+    name: show.name,
+    year: show.first_air_date
+      ? Number(show.first_air_date.slice(0, 4))
+      : 0,
+    rating: (show.vote_average ?? 0).toFixed(1),
+    genre:
+      show.genres?.map((genre) => genre.name).join(" · ") ||
+      show.genre_ids?.map(String).join(" · ") ||
+      "TV Series",
+    poster: show.poster_path
+      ? `${TMDB_IMAGE_URL}/w500${show.poster_path}`
+      : "/placeholder-poster.svg",
+    backdrop: show.backdrop_path
+      ? `${TMDB_IMAGE_URL}/original${show.backdrop_path}`
+      : "/placeholder-poster.svg",
+    description: show.overview || "No description available.",
+    status: show.status || "Unknown",
+    seasons: show.number_of_seasons ?? 0,
+  };
+}
+
+// ==========================================
+// TV SHOW API FUNCTIONS
+// ==========================================
+
+export async function getPopularTVShows(
+  page = 1,
+): Promise<{
+  shows: TVShow[];
+  totalPages: number;
+  totalResults: number;
+}> {
+  const data = await fetchTMDB<
+    TMDBResponse<TMDBTVShow> & {
+      total_pages: number;
+      total_results: number;
+    }
+  >(`/tv/popular?language=en-US&page=${page}`);
+
+  return {
+    shows: data.results.map(mapTVShow),
+    totalPages: data.total_pages,
+    totalResults: data.total_results,
+  };
+}
+
+export async function getTVShowDetails(id: number): Promise<{
+  show: TVShow;
+  seasons: TMDBSeason[];
+  creators: { id: number; name: string }[];
+  cast: TMDBTVDetails["credits"]["cast"];
+  trailer: string | null;
+  recommendations: TVShow[];
+  totalEpisodes: number;
+}> {
+  const data = await fetchTMDB<TMDBTVDetails>(
+    `/tv/${id}?language=en-US&append_to_response=credits,videos,recommendations`,
+  );
+
+  const videos = data.videos?.results ?? [];
+
+  const trailer =
+    videos.find(
+      (video) =>
+        video.site === "YouTube" &&
+        video.type === "Trailer" &&
+        video.official,
+    ) ??
+    videos.find(
+      (video) =>
+        video.site === "YouTube" && video.type === "Trailer",
+    );
+
+  return {
+    show: mapTVShow(data),
+    seasons: data.seasons ?? [],
+    creators: data.created_by ?? [],
+    cast: (data.credits?.cast ?? []).slice(0, 12),
+    trailer: trailer
+      ? `https://www.youtube.com/watch?v=${trailer.key}`
+      : null,
+    recommendations: (data.recommendations?.results ?? [])
+      .slice(0, 12)
+      .map(mapTVShow),
+    totalEpisodes: data.number_of_episodes ?? 0,
+  };
+}
+
+export async function getTVSeasonDetails(
+  id: number,
+  seasonNumber: number,
+): Promise<{
+  name: string;
+  seasonNumber: number;
+  episodes: TMDBEpisode[];
+}> {
+  const data = await fetchTMDB<{
+    name: string;
+    season_number: number;
+    episodes: TMDBEpisode[];
+  }>(`/tv/${id}/season/${seasonNumber}?language=en-US`);
+
+  return {
+    name: data.name,
+    seasonNumber: data.season_number,
+    episodes: data.episodes ?? [],
+  };
+}
+
+export async function getTVEpisodeDetails(
+  id: number,
+  seasonNumber: number,
+  episodeNumber: number,
+): Promise<TMDBEpisodeDetails> {
+  return fetchTMDB<TMDBEpisodeDetails>(
+    `/tv/${id}/season/${seasonNumber}/episode/${episodeNumber}?language=en-US`,
+  );
+}
