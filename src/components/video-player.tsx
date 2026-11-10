@@ -26,6 +26,7 @@ export function VideoPlayer({
   const [selectedSourceId, setSelectedSourceId] = useState(
     sources[0]?.id ?? ""
   );
+
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -52,6 +53,11 @@ export function VideoPlayer({
     setIsLoading(true);
     setHasError(false);
     setReloadKey((previous) => previous + 1);
+  }
+
+  function handleMediaError() {
+    setIsLoading(false);
+    setHasError(true);
   }
 
   if (!selectedSource) {
@@ -119,12 +125,12 @@ export function VideoPlayer({
             <AlertCircle size={34} className="mb-3 text-red-400" />
 
             <h2 className="text-lg font-bold text-white">
-              Unable to load this source
+              Unable to play this source
             </h2>
 
             <p className="mt-2 max-w-sm text-sm text-white/50">
-              The provider may have restricted external playback or
-              the video source may be unavailable.
+              The source could not be played. It may be unavailable
+              or may not permit external embedding.
             </p>
 
             <div className="mt-5 flex flex-wrap justify-center gap-3">
@@ -157,14 +163,14 @@ export function VideoPlayer({
             poster={poster}
             onLoadedData={() => setIsLoading(false)}
             onCanPlay={() => setIsLoading(false)}
-            onError={() => {
-              setIsLoading(false);
-              setHasError(true);
-            }}
+            onError={handleMediaError}
             className="h-full w-full object-contain"
             aria-label={`Video player: ${title}`}
           >
-            <source src={selectedSource.url} type="video/mp4" />
+            <source
+              src={selectedSource.url}
+              type="video/mp4"
+            />
             Your browser does not support HTML5 video.
           </video>
         ) : (
@@ -172,11 +178,16 @@ export function VideoPlayer({
             key={`${selectedSource.id}-${reloadKey}`}
             src={selectedSource.url}
             title={`${title} - ${selectedSource.name}`}
-            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
             allowFullScreen
             referrerPolicy="strict-origin-when-cross-origin"
-            onLoad={() => setIsLoading(false)}
-            className="h-full w-full border-0"
+            loading="eager"
+            onLoad={() => {
+              // This confirms the iframe document loaded,
+              // not that the actual video is playable.
+              setIsLoading(false);
+            }}
+            className="absolute inset-0 h-full w-full border-0"
           />
         )}
       </div>
