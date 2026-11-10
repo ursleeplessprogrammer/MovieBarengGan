@@ -9,95 +9,58 @@ export type VideoSource = {
   sourcePage: string;
 };
 
-// Optional manually registered movie sources.
-// These take priority over automatically generated sources.
+// Manually registered movie sources.
+// Add only video sources you are authorized to use.
 const movieVideoSources: Record<number, VideoSource[]> = {
-  10378: [
-    {
-      id: "demo-mp4",
-      name: "Demo MP4",
-      kind: "mp4",
-      url: "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-      license: "Verify license and hosting permissions before production",
-      attribution: "Big Buck Bunny — Blender Foundation",
-      sourcePage: "https://peach.blender.org/about/",
-    },
-  ],
+  // Example movie:
+  // 10378: [
+  //   {
+  //     id: "demo-mp4",
+  //     name: "Demo MP4",
+  //     kind: "mp4",
+  //     url: "https://your-domain.com/videos/movie.mp4",
+  //     license: "Authorized video content",
+  //     attribution: "Your content provider",
+  //     sourcePage: "https://your-domain.com",
+  //   },
+  // ],
 };
 
-// Optional manually registered episode sources.
-const episodeVideoSources: Record<string, VideoSource[]> = {};
+// Manually registered TV episode sources.
+// Key format: "showId-seasonNumber-episodeNumber"
+const episodeVideoSources: Record<string, VideoSource[]> = {
+  // Example:
+  // "60625-9-1": [
+  //   {
+  //     id: "episode-mp4",
+  //     name: "Episode Server",
+  //     kind: "mp4",
+  //     url: "https://your-domain.com/videos/episode.mp4",
+  //     license: "Authorized video content",
+  //     attribution: "Your content provider",
+  //     sourcePage: "https://your-domain.com",
+  //   },
+  // ],
+};
 
-// Automatically generated provider sources.
-// Only use providers that authorize your intended playback and embedding.
-
-function getMovieProviderSources(movieId: number): VideoSource[] {
-  return [
-    {
-      id: "vixsrc",
-      name: "VixSrc",
-      kind: "iframe",
-      url: `https://vixsrc.to/movie/${movieId}`,
-      license: "Third-party provider — authorization not verified",
-      attribution: "VixSrc",
-      sourcePage: "https://vixsrc.to/",
-    },
-  ];
-}
-
-function getEpisodeProviderSources(
-  showId: number,
-  seasonNumber: number,
-  episodeNumber: number
-): VideoSource[] {
-  return [
-    {
-      id: "vixsrc",
-      name: "VixSrc",
-      kind: "iframe",
-      url: `https://vixsrc.to/tv/${showId}/${seasonNumber}/${episodeNumber}`,
-      license: "Third-party provider — authorization not verified",
-      attribution: "VixSrc",
-      sourcePage: "https://vixsrc.to/",
-    },
-  ];
-}
-
-// Movies
-
+// Movie sources
 export function getMovieVideoSources(movieId: number): VideoSource[] {
-  const registeredSources = movieVideoSources[movieId];
-
-  if (registeredSources?.length) {
-    return registeredSources;
-  }
-
-  return getMovieProviderSources(movieId);
+  return movieVideoSources[movieId] ?? [];
 }
 
 export function getMovieVideoSource(movieId: number): VideoSource | null {
   return getMovieVideoSources(movieId)[0] ?? null;
 }
 
-// TV episodes
-
+// TV episode sources
 export function getEpisodeVideoSources(
   showId: number,
   seasonNumber: number,
   episodeNumber: number
 ): VideoSource[] {
   const key = `${showId}-${seasonNumber}-${episodeNumber}`;
-  const registeredSources = episodeVideoSources[key];
 
-  if (registeredSources?.length) {
-    return registeredSources;
-  }
-
-  return getEpisodeProviderSources(
-    showId,
-    seasonNumber,
-    episodeNumber
-  );
+  return episodeVideoSources[key] ?? [];
 }
 
 export function getEpisodeVideoSource(
@@ -105,9 +68,7 @@ export function getEpisodeVideoSource(
   seasonNumber: number,
   episodeNumber: number
 ): VideoSource | null {
-  return getEpisodeVideoSources(
-    showId,
-    seasonNumber,
-    episodeNumber
-  )[0] ?? null;
+  return (
+    getEpisodeVideoSources(showId, seasonNumber, episodeNumber)[0] ?? null
+  );
 }
