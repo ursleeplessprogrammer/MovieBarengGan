@@ -23,60 +23,48 @@ export function VideoPlayer({
   poster,
   sources,
 }: VideoPlayerProps) {
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedSourceId, setSelectedSourceId] = useState(
+    sources[0]?.id ?? ""
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [retryKey, setRetryKey] = useState(0);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    setSelectedIndex(0);
+    setSelectedSourceId(sources[0]?.id ?? "");
     setIsLoading(true);
     setHasError(false);
-    setRetryKey(0);
+    setReloadKey(0);
   }, [sources]);
 
-  const selectedSource = sources[selectedIndex];
+  const selectedSource =
+    sources.find((source) => source.id === selectedSourceId) ??
+    sources[0];
 
-  function selectSource(index: number) {
-    setSelectedIndex(index);
+  function selectSource(source: VideoSource) {
+    setSelectedSourceId(source.id);
     setIsLoading(true);
     setHasError(false);
-    setRetryKey(0);
+    setReloadKey((previous) => previous + 1);
   }
 
   function retrySource() {
     setIsLoading(true);
     setHasError(false);
-    setRetryKey((current) => current + 1);
-  }
-
-  function handleSourceError() {
-    setIsLoading(false);
-
-    // Automatically try the next source when available.
-    if (selectedIndex < sources.length - 1) {
-      setSelectedIndex((current) => current + 1);
-      setIsLoading(true);
-      setHasError(false);
-      setRetryKey(0);
-      return;
-    }
-
-    setHasError(true);
+    setReloadKey((previous) => previous + 1);
   }
 
   if (!selectedSource) {
     return (
-      <div className="flex aspect-video flex-col items-center justify-center rounded-2xl border border-white/10 bg-black/50 p-6 text-center">
-        <AlertCircle className="mb-3 h-10 w-10 text-white/40" />
+      <div className="flex aspect-video w-full flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#11151d] text-center">
+        <AlertCircle size={36} className="mb-4 text-[#c7f36b]" />
 
-        <h3 className="text-lg font-semibold text-white">
+        <h2 className="text-lg font-bold text-white">
           Streaming unavailable
-        </h3>
+        </h2>
 
-        <p className="mt-2 max-w-md text-sm text-white/50">
-          No authorized video source is currently available
-          for this title.
+        <p className="mt-2 max-w-sm text-sm text-white/50">
+          No video sources are currently available for this title.
         </p>
       </div>
     );
@@ -84,87 +72,107 @@ export function VideoPlayer({
 
   return (
     <div className="space-y-4">
-      {sources.length > 1 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="mr-1 text-sm font-medium text-white/60">
-            Servers:
-          </span>
+      {/* Source selection */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-sm font-semibold text-white/60">
+          Sources:
+        </span>
 
-          {sources.map((source, index) => (
+        {sources.map((source) => {
+          const isActive = source.id === selectedSource.id;
+
+          return (
             <button
               key={source.id}
               type="button"
-              onClick={() => selectSource(index)}
-              className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
-                selectedIndex === index
-                  ? "border-red-500 bg-red-500 text-white"
-                  : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
+              onClick={() => selectSource(source)}
+              className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                isActive
+                  ? "border-[#c7f36b] bg-[#c7f36b] text-[#10140a]"
+                  : "border-white/10 bg-white/[0.04] text-white/65 hover:border-white/30 hover:text-white"
               }`}
             >
+              <Play size={13} fill="currentColor" />
               {source.name}
             </button>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
 
-      <div className="relative aspect-video overflow-hidden rounded-2xl border border-white/10 bg-black">
+      {/* Video player */}
+      <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black">
         {isLoading && !hasError && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black">
-            <LoaderCircle className="mb-3 h-9 w-9 animate-spin text-red-500" />
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#090b10]">
+            <LoaderCircle
+              size={34}
+              className="animate-spin text-[#c7f36b]"
+            />
 
-            <p className="text-sm text-white/60">
+            <p className="mt-3 text-sm text-white/60">
               Loading {selectedSource.name}...
             </p>
           </div>
         )}
 
         {hasError ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-            <AlertCircle className="mb-3 h-10 w-10 text-red-500" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#11151d] px-6 text-center">
+            <AlertCircle size={34} className="mb-3 text-red-400" />
 
-            <h3 className="text-lg font-semibold text-white">
-              Unable to play this video
-            </h3>
+            <h2 className="text-lg font-bold text-white">
+              Unable to load this source
+            </h2>
 
-            <p className="mt-2 max-w-md text-sm text-white/50">
-              This source may be unavailable, may not allow
-              embedding, or may not support playback.
+            <p className="mt-2 max-w-sm text-sm text-white/50">
+              The provider may have restricted external playback or
+              the video source may be unavailable.
             </p>
 
-            <button
-              type="button"
-              onClick={retrySource}
-              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-red-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-600"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Retry
-            </button>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <button
+                type="button"
+                onClick={retrySource}
+                className="inline-flex items-center gap-2 rounded-full bg-[#c7f36b] px-5 py-2.5 text-sm font-bold text-[#10140a]"
+              >
+                <RefreshCw size={14} />
+                Retry
+              </button>
+
+              <a
+                href={selectedSource.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-white"
+              >
+                <ExternalLink size={14} />
+                Open source
+              </a>
+            </div>
           </div>
         ) : selectedSource.kind === "mp4" ? (
           <video
-            key={`${selectedSource.id}-${retryKey}`}
+            key={`${selectedSource.id}-${reloadKey}`}
             controls
             playsInline
             preload="metadata"
             poster={poster}
             onLoadedData={() => setIsLoading(false)}
             onCanPlay={() => setIsLoading(false)}
-            onError={handleSourceError}
+            onError={() => {
+              setIsLoading(false);
+              setHasError(true);
+            }}
             className="h-full w-full object-contain"
             aria-label={`Video player: ${title}`}
           >
-            <source
-              src={selectedSource.url}
-              type="video/mp4"
-            />
+            <source src={selectedSource.url} type="video/mp4" />
             Your browser does not support HTML5 video.
           </video>
         ) : (
           <iframe
-            key={`${selectedSource.id}-${retryKey}`}
+            key={`${selectedSource.id}-${reloadKey}`}
             src={selectedSource.url}
             title={`${title} - ${selectedSource.name}`}
-            allow="autoplay; fullscreen; picture-in-picture"
+            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
             allowFullScreen
             referrerPolicy="strict-origin-when-cross-origin"
             onLoad={() => setIsLoading(false)}
@@ -173,26 +181,19 @@ export function VideoPlayer({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-white/40">
-        <div className="space-y-1">
-          <p>
-            Playing with:{" "}
-            <span className="font-medium text-white/70">
-              {selectedSource.name}
-            </span>
-          </p>
-
-          <p>{selectedSource.attribution}</p>
-        </div>
+      {/* Source information */}
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-white/40">
+        <span>
+          Source: {selectedSource.name} · {selectedSource.attribution}
+        </span>
 
         <a
           href={selectedSource.sourcePage}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 transition hover:text-white"
+          className="text-[#c7f36b] transition hover:underline"
         >
-          Open source
-          <ExternalLink className="h-3.5 w-3.5" />
+          Source information
         </a>
       </div>
     </div>
