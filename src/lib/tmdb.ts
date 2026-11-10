@@ -1,7 +1,28 @@
+
 import type { Movie } from "@/lib/movies";
 
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_URL = "https://image.tmdb.org/t/p";
+const TMDB_MAX_PAGE = 500;
+
+// ==========================================
+// GENERAL TYPES
+// ==========================================
+
+interface TMDBResponse<T> {
+  results: T[];
+  page?: number;
+  total_pages?: number;
+  total_results?: number;
+}
+
+interface TMDBGenreResponse {
+  genres: TMDBGenre[];
+}
+
+// ==========================================
+// MOVIE TYPES
+// ==========================================
 
 interface TMDBMovie {
   id: number;
@@ -14,10 +35,6 @@ interface TMDBMovie {
   genre_ids?: number[];
   genres?: { id: number; name: string }[];
   runtime?: number | null;
-}
-
-interface TMDBResponse<T> {
-  results: T[];
 }
 
 interface TMDBCastMember {
@@ -64,16 +81,22 @@ export interface MoviePageData {
 
 export class TMDBNotFoundError extends Error {
   constructor() {
-    super("Movie not found.");
+    super("TMDB content not found.");
     this.name = "TMDBNotFoundError";
   }
 }
+
+// ==========================================
+// GENERAL TMDB FUNCTIONS
+// ==========================================
 
 async function fetchTMDB<T>(endpoint: string): Promise<T> {
   const token = process.env.TMDB_API_READ_ACCESS_TOKEN;
 
   if (!token) {
-    throw new Error("TMDB API token is missing. Check your .env.local file.");
+    throw new Error(
+      "TMDB API token is missing. Check your .env.local file.",
+    );
   }
 
   const response = await fetch(`${TMDB_BASE_URL}${endpoint}`, {
@@ -91,11 +114,36 @@ async function fetchTMDB<T>(endpoint: string): Promise<T> {
   }
 
   if (!response.ok) {
-    throw new Error(`TMDB API request failed: ${response.status}`);
+    const errorText = await response.text().catch(() => "");
+
+    throw new Error(
+      `TMDB API request failed: ${response.status}${
+        errorText ? ` - ${errorText}` : ""
+      }`,
+    );
   }
 
-  return response.json();
+  return response.json() as Promise<T>;
 }
+
+function normalizePage(page: number): number {
+  if (!Number.isSafeInteger(page) || page < 1) {
+    return 1;
+  }
+
+  return Math.min(page, TMDB_MAX_PAGE);
+}
+
+function getPagination<T>(data: TMDBResponse<T>) {
+  return {
+    totalPages: Math.min(data.total_pages ?? 0, TMDB_MAX_PAGE),
+    totalResults: data.total_results ?? 0,
+  };
+}
+
+// ==========================================
+// MOVIE HELPERS
+// ==========================================
 
 function formatRuntime(runtime: number | null | undefined): string {
   if (!runtime) return "N/A";
@@ -170,6 +218,10 @@ async function getMovieList(endpoint: string): Promise<Movie[]> {
   return data.results.map((movie) => mapMovie(movie));
 }
 
+// ==========================================
+// MOVIE API FUNCTIONS
+// ==========================================
+
 export async function getPopularMovies(): Promise<Movie[]> {
   return getMovieList("/movie/popular?language=en-US&page=1");
 }
@@ -198,21 +250,24 @@ export async function getMoviePageData(
   );
 
   const director =
-    details.credits?.crew.find((member) => member.job === "Director")
-      ?.name ?? "Unknown";
+    details.credits?.crew.find(
+      (member) => member.job === "Director",
+    )?.name ?? "Unknown";
 
   const cast = (details.credits?.cast ?? []).slice(0, 12);
 
-  const trailer = (details.videos?.results ?? []).find(
-    (video) =>
-      video.site === "YouTube" &&
-      video.type === "Trailer" &&
-      video.official,
-  ) ?? (details.videos?.results ?? []).find(
-    (video) =>
-      video.site === "YouTube" &&
-      video.type === "Trailer",
-  );
+  const trailer =
+    (details.videos?.results ?? []).find(
+      (video) =>
+        video.site === "YouTube" &&
+        video.type === "Trailer" &&
+        video.official,
+    ) ??
+    (details.videos?.results ?? []).find(
+      (video) =>
+        video.site === "YouTube" &&
+        video.type === "Trailer",
+    );
 
   const recommendations = (
     details.recommendations?.results ?? []
@@ -253,21 +308,17 @@ export async function searchMovies(
   const params = new URLSearchParams({
     query: trimmedQuery,
     language: "en-US",
-    page: String(Math.max(1, page)),
+    page: String(normalizePage(page)),
     include_adult: "false",
   });
 
   const data = await fetchTMDB<
-    TMDBResponse<TMDBMovie> & {
-      total_pages: number;
-      total_results: number;
-    }
+    TMDBResponse<TMDBMovie>
   >(`/search/movie?${params.toString()}`);
 
   return {
     movies: data.results.map((movie) => mapMovie(movie)),
-    totalPages: data.total_pages,
-    totalResults: data.total_results,
+    ...getPagination(data),
   };
 }
 
@@ -277,9 +328,9 @@ export type TMDBGenre = {
 };
 
 export async function getMovieGenres(): Promise<TMDBGenre[]> {
-  const data = await fetchTMDB<{
-    genres: TMDBGenre[];
-  }>("/genre/movie/list?language=en-US");
+  const data = await fetchTMDB<TMDBGenreResponse>(
+    "/genre/movie/list?language=en-US",
+  );
 
   return data.genres;
 }
@@ -296,7 +347,7 @@ export async function discoverMovies(
 }> {
   const params = new URLSearchParams({
     language: "en-US",
-    page: String(Math.max(1, page)),
+    page: String(normalizePage(page)),
     sort_by: sortBy,
     include_adult: "false",
     include_video: "false",
@@ -311,19 +362,14 @@ export async function discoverMovies(
   }
 
   const data = await fetchTMDB<
-    TMDBResponse<TMDBMovie> & {
-      total_pages: number;
-      total_results: number;
-    }
+    TMDBResponse<TMDBMovie>
   >(`/discover/movie?${params.toString()}`);
 
   return {
     movies: data.results.map((movie) => mapMovie(movie)),
-    totalPages: data.total_pages,
-    totalResults: data.total_results,
+    ...getPagination(data),
   };
 }
-
 
 // ==========================================
 // TV SHOW TYPES
@@ -345,6 +391,7 @@ export type TVShow = {
 export type TMDBTVShow = {
   id: number;
   name: string;
+  original_name?: string;
   first_air_date?: string;
   vote_average?: number;
   genre_ids?: number[];
@@ -354,7 +401,9 @@ export type TMDBTVShow = {
   overview?: string;
   status?: string;
   number_of_seasons?: number;
+  number_of_episodes?: number;
   seasons?: TMDBSeason[];
+  popularity?: number;
 };
 
 export type TMDBSeason = {
@@ -410,7 +459,38 @@ export type TMDBEpisodeDetails = TMDBEpisode & {
   overview: string;
 };
 
+// ==========================================
+// TV SHOW GENRE HELPERS
+// ==========================================
+
+function getTVGenreName(id: number): string {
+  const genres: Record<number, string> = {
+    10759: "Action & Adventure",
+    16: "Animation",
+    35: "Comedy",
+    80: "Crime",
+    99: "Documentary",
+    18: "Drama",
+    10751: "Family",
+    10762: "Kids",
+    9648: "Mystery",
+    10763: "News",
+    10764: "Reality",
+    10765: "Sci-Fi & Fantasy",
+    10766: "Soap",
+    10767: "Talk",
+    10768: "War & Politics",
+    37: "Western",
+  };
+
+  return genres[id] ?? "Other";
+}
+
 function mapTVShow(show: TMDBTVShow): TVShow {
+  const genreNames = show.genres
+    ? show.genres.map((genre) => genre.name)
+    : (show.genre_ids ?? []).map(getTVGenreName);
+
   return {
     id: show.id,
     name: show.name,
@@ -419,9 +499,7 @@ function mapTVShow(show: TMDBTVShow): TVShow {
       : 0,
     rating: (show.vote_average ?? 0).toFixed(1),
     genre:
-      show.genres?.map((genre) => genre.name).join(" · ") ||
-      show.genre_ids?.map(String).join(" · ") ||
-      "TV Series",
+      genreNames.slice(0, 2).join(" · ") || "TV Series",
     poster: show.poster_path
       ? `${TMDB_IMAGE_URL}/w500${show.poster_path}`
       : "/placeholder-poster.svg",
@@ -430,14 +508,18 @@ function mapTVShow(show: TMDBTVShow): TVShow {
       : "/placeholder-poster.svg",
     description: show.overview || "No description available.",
     status: show.status || "Unknown",
-    seasons: show.number_of_seasons ?? 0,
+    seasons: show.number_of_seasons ?? show.seasons?.length ?? 0,
   };
 }
 
 // ==========================================
-// TV SHOW API FUNCTIONS
+// TV SHOW CATALOGUE
 // ==========================================
 
+/**
+ * Get popular TV shows.
+ * Supports pagination up to TMDB's 500-page limit.
+ */
 export async function getPopularTVShows(
   page = 1,
 ): Promise<{
@@ -446,20 +528,149 @@ export async function getPopularTVShows(
   totalResults: number;
 }> {
   const data = await fetchTMDB<
-    TMDBResponse<TMDBTVShow> & {
-      total_pages: number;
-      total_results: number;
-    }
-  >(`/tv/popular?language=en-US&page=${page}`);
+    TMDBResponse<TMDBTVShow>
+  >(
+    `/tv/popular?language=en-US&page=${normalizePage(page)}`,
+  );
 
   return {
     shows: data.results.map(mapTVShow),
-    totalPages: data.total_pages,
-    totalResults: data.total_results,
+    ...getPagination(data),
   };
 }
 
-export async function getTVShowDetails(id: number): Promise<{
+/**
+ * Search TV shows by title.
+ * Finds shows beyond the popular catalogue.
+ */
+export async function searchTVShows(
+  query: string,
+  page = 1,
+): Promise<{
+  shows: TVShow[];
+  totalPages: number;
+  totalResults: number;
+}> {
+  const trimmedQuery = query.trim();
+
+  if (!trimmedQuery) {
+    return {
+      shows: [],
+      totalPages: 0,
+      totalResults: 0,
+    };
+  }
+
+  const params = new URLSearchParams({
+    query: trimmedQuery,
+    language: "en-US",
+    page: String(normalizePage(page)),
+    include_adult: "false",
+  });
+
+  const data = await fetchTMDB<
+    TMDBResponse<TMDBTVShow>
+  >(`/search/tv?${params.toString()}`);
+
+  return {
+    shows: data.results.map(mapTVShow),
+    ...getPagination(data),
+  };
+}
+
+/**
+ * Get trending TV shows.
+ * The time window can be "day" or "week".
+ */
+export async function getTrendingTVShows(
+  timeWindow: "day" | "week" = "week",
+): Promise<TVShow[]> {
+  const data = await fetchTMDB<
+    TMDBResponse<TMDBTVShow>
+  >(`/trending/tv/${timeWindow}?language=en-US`);
+
+  return data.results.map(mapTVShow);
+}
+
+/**
+ * Get top-rated TV shows.
+ */
+export async function getTopRatedTVShows(
+  page = 1,
+): Promise<{
+  shows: TVShow[];
+  totalPages: number;
+  totalResults: number;
+}> {
+  const data = await fetchTMDB<
+    TMDBResponse<TMDBTVShow>
+  >(
+    `/tv/top_rated?language=en-US&page=${normalizePage(page)}`,
+  );
+
+  return {
+    shows: data.results.map(mapTVShow),
+    ...getPagination(data),
+  };
+}
+
+/**
+ * Discover TV shows using genre, year, and sorting.
+ */
+export async function discoverTVShows(
+  genreId?: number,
+  year?: number,
+  sortBy = "popularity.desc",
+  page = 1,
+): Promise<{
+  shows: TVShow[];
+  totalPages: number;
+  totalResults: number;
+}> {
+  const params = new URLSearchParams({
+    language: "en-US",
+    page: String(normalizePage(page)),
+    sort_by: sortBy,
+    include_adult: "false",
+    include_null_first_air_dates: "false",
+  });
+
+  if (genreId) {
+    params.set("with_genres", String(genreId));
+  }
+
+  if (year) {
+    params.set("first_air_date_year", String(year));
+  }
+
+  const data = await fetchTMDB<
+    TMDBResponse<TMDBTVShow>
+  >(`/discover/tv?${params.toString()}`);
+
+  return {
+    shows: data.results.map(mapTVShow),
+    ...getPagination(data),
+  };
+}
+
+/**
+ * Get the available TV genres from TMDB.
+ */
+export async function getTVGenres(): Promise<TMDBGenre[]> {
+  const data = await fetchTMDB<TMDBGenreResponse>(
+    "/genre/tv/list?language=en-US",
+  );
+
+  return data.genres;
+}
+
+// ==========================================
+// TV SHOW DETAILS
+// ==========================================
+
+export async function getTVShowDetails(
+  id: number,
+): Promise<{
   show: TVShow;
   seasons: TMDBSeason[];
   creators: { id: number; name: string }[];
@@ -488,7 +699,8 @@ export async function getTVShowDetails(id: number): Promise<{
     ) ??
     videos.find(
       (video) =>
-        video.site === "YouTube" && video.type === "Trailer",
+        video.site === "YouTube" &&
+        video.type === "Trailer",
     );
 
   return {
@@ -506,6 +718,10 @@ export async function getTVShowDetails(id: number): Promise<{
   };
 }
 
+// ==========================================
+// TV SEASON DETAILS
+// ==========================================
+
 export async function getTVSeasonDetails(
   id: number,
   seasonNumber: number,
@@ -518,7 +734,9 @@ export async function getTVSeasonDetails(
     name: string;
     season_number: number;
     episodes: TMDBEpisode[];
-  }>(`/tv/${id}/season/${seasonNumber}?language=en-US`);
+  }>(
+    `/tv/${id}/season/${seasonNumber}?language=en-US`,
+  );
 
   return {
     name: data.name,
@@ -526,6 +744,10 @@ export async function getTVSeasonDetails(
     episodes: data.episodes ?? [],
   };
 }
+
+// ==========================================
+// TV EPISODE DETAILS
+// ==========================================
 
 export async function getTVEpisodeDetails(
   id: number,
