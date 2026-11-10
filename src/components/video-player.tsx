@@ -81,7 +81,6 @@ export function VideoPlayer({
 
   // Floating player state.
   const [isFloating, setIsFloating] = useState(false);
-  const [popupBlocked, setPopupBlocked] = useState(false);
 
   useEffect(() => {
     setSelectedSourceId(sources[0]?.id ?? "");
@@ -93,7 +92,6 @@ export function VideoPlayer({
     setCurrentTime(0);
     setDuration(0);
     setIsFloating(false);
-    setPopupBlocked(false);
   }, [sources]);
 
   const selectedSource =
@@ -136,6 +134,19 @@ export function VideoPlayer({
     selectedSource?.kind === "iframe" && isVixSrc
       ? buildVixSrcEmbedUrl(selectedSource.url, startAt)
       : selectedSource?.url ?? "";
+
+  // Direct provider URL for opening in a new tab.
+  const newTabUrl = selectedSource
+    ? selectedSource.kind === "iframe"
+      ? iframeSrc
+      : selectedSource.url
+    : "";
+
+  function openInNewTab() {
+    if (!newTabUrl) return;
+
+    window.open(newTabUrl, "_blank", "noopener,noreferrer");
+  }
 
   // Listen for VixSrc player messages.
   useEffect(() => {
@@ -193,7 +204,6 @@ export function VideoPlayer({
     setPlaybackStatus("ready");
     setCurrentTime(0);
     setDuration(0);
-    setPopupBlocked(false);
   }
 
   function retrySource() {
@@ -201,45 +211,11 @@ export function VideoPlayer({
     setHasError(false);
     setReloadKey((previous) => previous + 1);
     setPlaybackStatus("ready");
-    setPopupBlocked(false);
   }
 
   function handleMediaError() {
     setIsLoading(false);
     setHasError(true);
-  }
-
-  // Open the provider URL in a separate browser window.
-  function openPopout() {
-    if (!selectedSource) return;
-
-    const url =
-      selectedSource.kind === "iframe"
-        ? iframeSrc
-        : selectedSource.url;
-
-    const popup = window.open(
-      url,
-      "_blank",
-      [
-        "popup=yes",
-        "width=1100",
-        "height=700",
-        "left=100",
-        "top=80",
-        "resizable=yes",
-        "scrollbars=yes",
-      ].join(",")
-    );
-
-    if (!popup) {
-      setPopupBlocked(true);
-      return;
-    }
-
-    // Prevent the opened page from controlling this page.
-    popup.opener = null;
-    setPopupBlocked(false);
   }
 
   if (!selectedSource) {
@@ -283,7 +259,7 @@ export function VideoPlayer({
 
           <p className="mt-2 max-w-sm text-sm text-white/50">
             The video source could not be played.
-            Try again or open the provider directly.
+            Try again or open it in a new tab.
           </p>
 
           <div className="mt-5 flex flex-wrap justify-center gap-3">
@@ -298,11 +274,11 @@ export function VideoPlayer({
 
             <button
               type="button"
-              onClick={openPopout}
+              onClick={openInNewTab}
               className="inline-flex items-center gap-2 rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-white"
             >
               <ExternalLink size={14} />
-              Open pop-out
+              Open in new tab
             </button>
           </div>
         </div>
@@ -398,11 +374,11 @@ export function VideoPlayer({
 
           <button
             type="button"
-            onClick={openPopout}
+            onClick={openInNewTab}
             className="inline-flex items-center gap-2 rounded-full bg-[#c7f36b] px-4 py-2 text-xs font-bold text-[#10140a] transition hover:bg-[#d7ff83]"
           >
             <ExternalLink size={14} />
-            Open pop-out
+            Open in new tab
           </button>
         </div>
       </div>
@@ -488,25 +464,6 @@ export function VideoPlayer({
         </p>
       )}
 
-      {/* Pop-up blocker message */}
-      {popupBlocked && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-400/20 bg-amber-400/5 p-4">
-          <AlertCircle
-            size={18}
-            className="mt-0.5 shrink-0 text-amber-400"
-          />
-          <div>
-            <p className="text-sm font-semibold text-white">
-              Pop-up blocked
-            </p>
-            <p className="mt-1 text-xs text-white/50">
-              Your browser blocked the new player window.
-              Allow pop-ups for MovieBarengGan and try again.
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Cross-origin iframe fallback information */}
       {isVixSrc && !hasError && (
         <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -515,18 +472,17 @@ export function VideoPlayer({
               Having trouble playing?
             </p>
             <p className="mt-1 text-xs text-white/45">
-              If the embedded player is blocked, try opening
-              the provider in a separate window.
+              If the embedded player is blocked, open it in a new tab instead.
             </p>
           </div>
 
           <button
             type="button"
-            onClick={openPopout}
+            onClick={openInNewTab}
             className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-[#c7f36b]/40 px-4 py-2 text-xs font-semibold text-[#c7f36b] transition hover:bg-[#c7f36b]/10"
           >
             <ExternalLink size={13} />
-            Try separate player
+            Open in new tab
           </button>
         </div>
       )}
