@@ -10,13 +10,13 @@ export type VideoSource = {
 };
 
 // Optional manually registered movie sources.
-// These take priority over VixSrc.
+// Registered sources take priority over VixSrc.
 const movieVideoSources: Record<number, VideoSource[]> = {
   // Example:
-  // 10378: [
+  // 550: [
   //   {
   //     id: "custom-mp4",
-  //     name: "Custom Video",
+  //     name: "Custom Server",
   //     kind: "mp4",
   //     url: "https://your-domain.com/movie.mp4",
   //     license: "Authorized content",
@@ -28,12 +28,9 @@ const movieVideoSources: Record<number, VideoSource[]> = {
 
 // Optional manually registered episode sources.
 // Key format: "showId-seasonNumber-episodeNumber"
-const episodeVideoSources: Record<string, VideoSource[]> = {
-  // Example:
-  // "60625-9-1": [],
-};
+const episodeVideoSources: Record<string, VideoSource[]> = {};
 
-// VixSrc movie provider
+// VixSrc movie player
 function getMovieProviderSources(movieId: number): VideoSource[] {
   return [
     {
@@ -48,7 +45,7 @@ function getMovieProviderSources(movieId: number): VideoSource[] {
   ];
 }
 
-// VixSrc TV episode provider
+// VixSrc TV episode player
 function getEpisodeProviderSources(
   showId: number,
   seasonNumber: number,
@@ -69,13 +66,11 @@ function getEpisodeProviderSources(
 
 // Movies
 export function getMovieVideoSources(movieId: number): VideoSource[] {
-  const registeredSources = movieVideoSources[movieId];
-
-  if (registeredSources?.length) {
-    return registeredSources;
-  }
-
-  return getMovieProviderSources(movieId);
+  return (
+    movieVideoSources[movieId]?.length
+      ? movieVideoSources[movieId]
+      : getMovieProviderSources(movieId)
+  );
 }
 
 export function getMovieVideoSource(movieId: number): VideoSource | null {
@@ -89,16 +84,11 @@ export function getEpisodeVideoSources(
   episodeNumber: number
 ): VideoSource[] {
   const key = `${showId}-${seasonNumber}-${episodeNumber}`;
-  const registeredSources = episodeVideoSources[key];
 
-  if (registeredSources?.length) {
-    return registeredSources;
-  }
-
-  return getEpisodeProviderSources(
-    showId,
-    seasonNumber,
-    episodeNumber
+  return (
+    episodeVideoSources[key]?.length
+      ? episodeVideoSources[key]
+      : getEpisodeProviderSources(showId, seasonNumber, episodeNumber)
   );
 }
 
