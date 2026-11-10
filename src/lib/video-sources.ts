@@ -10,27 +10,30 @@ export type VideoSource = {
 };
 
 // Optional manually registered movie sources.
-// These take priority over automatically generated sources.
+// These take priority over VixSrc.
 const movieVideoSources: Record<number, VideoSource[]> = {
-  10378: [
-    {
-      id: "demo-mp4",
-      name: "Demo MP4",
-      kind: "mp4",
-      url: "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-      license: "Verify license and hosting permissions before production",
-      attribution: "Big Buck Bunny — Blender Foundation",
-      sourcePage: "https://peach.blender.org/about/",
-    },
-  ],
+  // Example:
+  // 10378: [
+  //   {
+  //     id: "custom-mp4",
+  //     name: "Custom Video",
+  //     kind: "mp4",
+  //     url: "https://your-domain.com/movie.mp4",
+  //     license: "Authorized content",
+  //     attribution: "Your provider",
+  //     sourcePage: "https://your-domain.com/",
+  //   },
+  // ],
 };
 
 // Optional manually registered episode sources.
-const episodeVideoSources: Record<string, VideoSource[]> = {};
+// Key format: "showId-seasonNumber-episodeNumber"
+const episodeVideoSources: Record<string, VideoSource[]> = {
+  // Example:
+  // "60625-9-1": [],
+};
 
-// Automatically generated provider sources.
-// Only use providers that authorize your intended playback and embedding.
-
+// VixSrc movie provider
 function getMovieProviderSources(movieId: number): VideoSource[] {
   return [
     {
@@ -45,6 +48,7 @@ function getMovieProviderSources(movieId: number): VideoSource[] {
   ];
 }
 
+// VixSrc TV episode provider
 function getEpisodeProviderSources(
   showId: number,
   seasonNumber: number,
@@ -64,7 +68,6 @@ function getEpisodeProviderSources(
 }
 
 // Movies
-
 export function getMovieVideoSources(movieId: number): VideoSource[] {
   const registeredSources = movieVideoSources[movieId];
 
@@ -80,7 +83,6 @@ export function getMovieVideoSource(movieId: number): VideoSource | null {
 }
 
 // TV episodes
-
 export function getEpisodeVideoSources(
   showId: number,
   seasonNumber: number,
@@ -105,9 +107,7 @@ export function getEpisodeVideoSource(
   seasonNumber: number,
   episodeNumber: number
 ): VideoSource | null {
-  return getEpisodeVideoSources(
-    showId,
-    seasonNumber,
-    episodeNumber
-  )[0] ?? null;
+  return (
+    getEpisodeVideoSources(showId, seasonNumber, episodeNumber)[0] ?? null
+  );
 }
