@@ -221,7 +221,7 @@ export default async function HomePage() {
           ].map((item) => (
             <a
               key={item.name}
-              href="#movies"
+              href={item.name === "Classics" ? "/discover?sort=primary_release_date.asc" : `/discover?genre=${({ Adventure: 12, Drama: 18, Documentary: 99 } as Record<string, number>)[item.name] ?? ""}`}
               className={`group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br ${item.tone} to-[#11151d] p-6 transition hover:-translate-y-1 hover:border-[#c7f36b]/40`}
             >
               <item.icon className="mb-10 text-[#c7f36b]" size={23} />

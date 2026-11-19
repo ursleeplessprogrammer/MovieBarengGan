@@ -512,6 +512,53 @@ function mapTVShow(show: TMDBTVShow): TVShow {
   };
 }
 
+
+export type CatalogSearchItem =
+  | { mediaType: "movie"; item: Movie }
+  | { mediaType: "tv"; item: TVShow };
+
+export async function searchCatalog(
+  query: string,
+  page = 1,
+  mediaType: "all" | "movie" | "tv" = "all",
+): Promise<{
+  items: CatalogSearchItem[];
+  totalPages: number;
+  totalResults: number;
+}> {
+  const trimmedQuery = query.trim();
+  if (!trimmedQuery) {
+    return { items: [], totalPages: 0, totalResults: 0 };
+  }
+
+  const params = new URLSearchParams({
+    query: trimmedQuery,
+    language: "en-US",
+    page: String(normalizePage(page)),
+    include_adult: "false",
+  });
+  const endpoint = mediaType === "all"
+    ? "/search/multi"
+    : mediaType === "movie"
+      ? "/search/movie"
+      : "/search/tv";
+  const data = await fetchTMDB<
+    TMDBResponse<(TMDBMovie | TMDBTVShow) & { media_type?: string }>
+  >(`${endpoint}?${params.toString()}`);
+
+  const items: CatalogSearchItem[] = [];
+  for (const result of data.results) {
+    const kind = mediaType === "all" ? result.media_type : mediaType;
+    if (kind === "movie" && "title" in result) {
+      items.push({ mediaType: "movie", item: mapMovie(result as TMDBMovie) });
+    } else if (kind === "tv" && "name" in result) {
+      items.push({ mediaType: "tv", item: mapTVShow(result as TMDBTVShow) });
+    }
+  }
+
+  return { items, ...getPagination(data) };
+}
+
 // ==========================================
 // TV SHOW CATALOGUE
 // ==========================================
