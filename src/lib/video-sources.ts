@@ -92,7 +92,15 @@ export function getEpisodeVideoSources(
       source.seasonNumber === seasonNumber &&
       source.episodeNumber === episodeNumber
     )
-    .map(({ movieId: _movieId, showId: _showId, seasonNumber: _season, episodeNumber: _episode, ...source }) => source);
+    .map((source) => ({
+      id: source.id,
+      name: source.name,
+      kind: source.kind,
+      url: source.url,
+      license: source.license,
+      attribution: source.attribution,
+      sourcePage: source.sourcePage,
+    }));
 }
 
 export function getEpisodeVideoSource(
