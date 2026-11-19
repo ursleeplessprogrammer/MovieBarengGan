@@ -38,14 +38,15 @@ Project link: https://movie-bareng-gan.vercel.app/
 - View episode information, including air dates and runtimes.
 
 ### 🔎 Search
-- Search for movies and TV shows.
+- Unified search for movies and TV shows, with content-type filtering.
 - Retrieve movie information using TMDB.
 - Navigate directly to individual title pages.
 
 ### ▶️ Watch Experience
 - Dedicated movie and TV episode watch pages.
 - Integrated video player interface.
-- Support for multiple video sources.
+- VixSrc embedded player for movies and TV episodes, plus optional configured HTTPS MP4 and iframe sources.
+- Browser-local playback progress for MP4 and VixSrc player events when supported.
 - Streaming availability and playback error handling.
 
 ### 🎨 User Interface
@@ -128,6 +129,9 @@ Create a `.env.local` file in the root directory.
 
 ```env
 TMDB_API_READ_ACCESS_TOKEN=your_tmdb_api_read_access_token
+
+# Optional JSON array of video sources. Only configure content you own or are authorized to distribute.
+MBG_VIDEO_SOURCES_JSON=[]
 ```
 
 You can obtain your API credentials from [The Movie Database (TMDB)](https://www.themoviedb.org/settings/api).
@@ -139,6 +143,27 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## ▶️ Configuring authorized playback
+
+Set `MBG_VIDEO_SOURCES_JSON` in the server environment to a JSON array. A movie entry uses `movieId`; an episode entry uses `showId`, `seasonNumber`, and `episodeNumber`. Each entry requires `id`, `name`, `kind` (`mp4` or `iframe`), `url`, `license`, `attribution`, and `sourcePage`. All URLs must use HTTPS. Example using fictional URLs:
+
+```json
+[
+  {
+    "id": "owned-film-01",
+    "movieId": 12345,
+    "name": "My Licensed Video CDN",
+    "kind": "mp4",
+    "url": "https://media.example.com/film.mp4",
+    "license": "Owned by the project operator",
+    "attribution": "Project media library",
+    "sourcePage": "https://media.example.com/terms"
+  }
+]
+```
+
+VixSrc is embedded directly in the watch page using its documented movie and episode URL patterns. The player listens for VixSrc postMessage events with strict origin and iframe-window checks to store resume progress locally. If the provider blocks iframe embedding, users can open the provider page directly. Other cross-origin iframe sources do not expose playback progress unless their provider supplies a supported messaging API.
 
 ## 🔑 API Integration
 
@@ -168,7 +193,9 @@ TMDB provides metadata and artwork, not movie files or streaming rights. Video p
 - [x] Movie watch pages.
 - [x] TV episode watch pages.
 - [x] Integrated video player interface.
-- [ ] Improve streaming source availability and reliability.
+- [x] Restore VixSrc as the default in-page movie and episode embed.
+- [x] Add local resume progress for MP4 and VixSrc events, with provider iframe fallback.
+- [x] Improve unified movie and TV search.
 - [ ] User authentication and profiles.
 - [ ] Personal watchlist and watch history.
 - [ ] Supabase database integration.
@@ -182,7 +209,7 @@ Movie metadata and images are provided by [The Movie Database (TMDB)](https://ww
 
 MovieBarengGan is not affiliated with, endorsed by, or officially associated with TMDB.
 
-Streaming functionality depends on separately configured video sources. Only content that is legally authorized for distribution should be used.
+TMDB supplies metadata, not video streams or distribution rights. MovieBarengGan does not scrape or automatically select third-party streaming sites. Playback uses the VixSrc embedded player by default and may also use configured HTTPS sources. Use only streams you are authorized to embed or distribute. Provider-side frame restrictions remain in force and cannot be overridden by MovieBarengGan.
 
 ---
 
