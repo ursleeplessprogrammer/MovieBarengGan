@@ -546,16 +546,15 @@ export async function searchCatalog(
     TMDBResponse<(TMDBMovie | TMDBTVShow) & { media_type?: string }>
   >(`${endpoint}?${params.toString()}`);
 
-  const items: CatalogSearchItem[] = data.results.flatMap((result) => {
+  const items: CatalogSearchItem[] = [];
+  for (const result of data.results) {
     const kind = mediaType === "all" ? result.media_type : mediaType;
     if (kind === "movie" && "title" in result) {
-      return [{ mediaType: "movie" as const, item: mapMovie(result as TMDBMovie) }];
+      items.push({ mediaType: "movie", item: mapMovie(result as TMDBMovie) });
+    } else if (kind === "tv" && "name" in result) {
+      items.push({ mediaType: "tv", item: mapTVShow(result as TMDBTVShow) });
     }
-    if (kind === "tv" && "name" in result) {
-      return [{ mediaType: "tv" as const, item: mapTVShow(result as TMDBTVShow) }];
-    }
-    return [];
-  });
+  }
 
   return { items, ...getPagination(data) };
 }
