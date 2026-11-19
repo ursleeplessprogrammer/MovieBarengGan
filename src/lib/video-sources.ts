@@ -1,4 +1,3 @@
-
 export type VideoSource = {
   id: string;
   name: string;
@@ -9,155 +8,89 @@ export type VideoSource = {
   sourcePage: string;
 };
 
-// Optional manually registered movie sources.
-// Registered sources take priority over VixSrc.
-const movieVideoSources: Record<number, VideoSource[]> = {
-  // Example:
-  // 550: [
-  //   {
-  //     id: "custom-mp4",
-  //     name: "Custom Server",
-  //     kind: "mp4",
-  //     url: "https://your-domain.com/movie.mp4",
-  //     license: "Authorized content",
-  //     attribution: "Your provider",
-  //     sourcePage: "https://your-domain.com/",
-  //   },
-  // ],
+type ConfiguredSource = VideoSource & {
+  movieId?: number;
+  showId?: number;
+  seasonNumber?: number;
+  episodeNumber?: number;
 };
 
-// Optional manually registered episode sources.
-// Key format: "showId-seasonNumber-episodeNumber"
-const episodeVideoSources: Record<string, VideoSource[]> = {};
+function getConfiguredSources(): ConfiguredSource[] {
+  const raw = process.env.MBG_VIDEO_SOURCES_JSON;
+  if (!raw) return [];
 
-// VixSrc configuration
-const VIXSRC_BASE_URL = "https://vixsrc.to";
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
 
-const VIXSRC_EMBED_PARAMS = {
-  primaryColor: "C7F36B",
-  secondaryColor: "20251A",
-  autoplay: "false",
-};
+    return parsed.filter((value): value is ConfiguredSource => {
+      if (!value || typeof value !== "object") return false;
+      const source = value as Record<string, unknown>;
+      let mediaUrl: URL;
+      let sourcePage: URL;
+      try {
+        mediaUrl = new URL(String(source.url ?? ""));
+        sourcePage = new URL(String(source.sourcePage ?? ""));
+      } catch {
+        return false;
+      }
 
-// Build a VixSrc movie URL.
-function buildVixSrcMovieUrl(movieId: number): string {
-  const url = new URL(
-    `/movie/${movieId}`,
-    VIXSRC_BASE_URL
-  );
+      const movieTarget = Number.isSafeInteger(source.movieId) && Number(source.movieId) > 0;
+      const episodeTarget =
+        Number.isSafeInteger(source.showId) && Number(source.showId) > 0 &&
+        Number.isSafeInteger(source.seasonNumber) && Number(source.seasonNumber) >= 0 &&
+        Number.isSafeInteger(source.episodeNumber) && Number(source.episodeNumber) > 0;
 
-  url.search = new URLSearchParams(VIXSRC_EMBED_PARAMS).toString();
-
-  return url.toString();
-}
-
-// Build a VixSrc TV episode URL.
-function buildVixSrcEpisodeUrl(
-  showId: number,
-  seasonNumber: number,
-  episodeNumber: number
-): string {
-  const url = new URL(
-    `/tv/${showId}/${seasonNumber}/${episodeNumber}`,
-    VIXSRC_BASE_URL
-  );
-
-  url.search = new URLSearchParams(VIXSRC_EMBED_PARAMS).toString();
-
-  return url.toString();
-}
-
-// Basic ID validation.
-function isValidId(value: number): boolean {
-  return Number.isInteger(value) && value > 0;
-}
-
-// VixSrc movie player.
-function getMovieProviderSources(movieId: number): VideoSource[] {
-  if (!isValidId(movieId)) {
+      return (
+        typeof source.id === "string" && source.id.trim().length > 0 &&
+        typeof source.name === "string" && source.name.trim().length > 0 &&
+        (source.kind === "mp4" || source.kind === "iframe") &&
+        mediaUrl.protocol === "https:" && sourcePage.protocol === "https:" &&
+        typeof source.license === "string" && source.license.trim().length > 0 &&
+        typeof source.attribution === "string" && source.attribution.trim().length > 0 &&
+        (movieTarget || episodeTarget)
+      );
+    });
+  } catch {
     return [];
   }
-
-  return [
-    {
-      id: "vixsrc",
-      name: "VixSrc",
-      kind: "iframe",
-      url: buildVixSrcMovieUrl(movieId),
-      license: "Third-party provider — authorization not verified",
-      attribution: "VixSrc",
-      sourcePage: VIXSRC_BASE_URL,
-    },
-  ];
 }
 
-// VixSrc TV episode player.
-function getEpisodeProviderSources(
-  showId: number,
-  seasonNumber: number,
-  episodeNumber: number
-): VideoSource[] {
-  if (
-    !isValidId(showId) ||
-    !Number.isInteger(seasonNumber) ||
-    seasonNumber < 0 ||
-    !Number.isInteger(episodeNumber) ||
-    episodeNumber < 1
-  ) {
-    return [];
-  }
-
-  return [
-    {
-      id: "vixsrc",
-      name: "VixSrc",
-      kind: "iframe",
-      url: buildVixSrcEpisodeUrl(
-        showId,
-        seasonNumber,
-        episodeNumber
-      ),
-      license: "Third-party provider — authorization not verified",
-      attribution: "VixSrc",
-      sourcePage: VIXSRC_BASE_URL,
-    },
-  ];
-}
-
-// Movies
 export function getMovieVideoSources(movieId: number): VideoSource[] {
-  return movieVideoSources[movieId]?.length
-    ? movieVideoSources[movieId]
-    : getMovieProviderSources(movieId);
+  if (!Number.isSafeInteger(movieId) || movieId <= 0) return [];
+  return getConfiguredSources()
+    .filter((source) => source.movieId === movieId)
+    .map(({ movieId: _movieId, showId: _showId, seasonNumber: _season, episodeNumber: _episode, ...source }) => source);
 }
 
 export function getMovieVideoSource(movieId: number): VideoSource | null {
   return getMovieVideoSources(movieId)[0] ?? null;
 }
 
-// TV episodes
 export function getEpisodeVideoSources(
   showId: number,
   seasonNumber: number,
-  episodeNumber: number
+  episodeNumber: number,
 ): VideoSource[] {
-  const key = `${showId}-${seasonNumber}-${episodeNumber}`;
+  if (
+    !Number.isSafeInteger(showId) || showId <= 0 ||
+    !Number.isSafeInteger(seasonNumber) || seasonNumber < 0 ||
+    !Number.isSafeInteger(episodeNumber) || episodeNumber <= 0
+  ) return [];
 
-  return episodeVideoSources[key]?.length
-    ? episodeVideoSources[key]
-    : getEpisodeProviderSources(
-        showId,
-        seasonNumber,
-        episodeNumber
-      );
+  return getConfiguredSources()
+    .filter((source) =>
+      source.showId === showId &&
+      source.seasonNumber === seasonNumber &&
+      source.episodeNumber === episodeNumber
+    )
+    .map(({ movieId: _movieId, showId: _showId, seasonNumber: _season, episodeNumber: _episode, ...source }) => source);
 }
 
 export function getEpisodeVideoSource(
   showId: number,
   seasonNumber: number,
-  episodeNumber: number
+  episodeNumber: number,
 ): VideoSource | null {
-  return (
-    getEpisodeVideoSources(showId, seasonNumber, episodeNumber)[0] ?? null
-  );
+  return getEpisodeVideoSources(showId, seasonNumber, episodeNumber)[0] ?? null;
 }
