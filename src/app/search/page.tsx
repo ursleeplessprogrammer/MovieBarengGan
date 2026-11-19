@@ -89,7 +89,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               <div>
                 <p className="text-xs font-bold tracking-[0.15em] text-[#c7f36b]">SEARCH RESULTS</p>
                 <h2 className="mt-2 text-2xl font-black">Results for &ldquo;{query}&rdquo;</h2>
-                <p className="mt-2 text-sm text-white/40">{results.totalResults.toLocaleString()} results found</p>
+                <p className="mt-2 text-sm text-white/40">{results.items.length.toLocaleString()} results on this page</p>
               </div>
               <div className="flex items-center gap-2 text-xs text-white/35"><SlidersHorizontal size={14} /> {type === "all" ? "Movies & TV shows" : type === "movie" ? "Movies" : "TV shows"}</div>
             </div>
