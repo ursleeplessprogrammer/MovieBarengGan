@@ -134,6 +134,7 @@ export default async function WatchEpisodePage({
               <div className="mt-8">
                 {videoSources.length > 0 ? (
                   <VideoPlayer
+                    progressKey={`mbg:progress:tv:${showId}:${seasonNumber}:${episodeNumber}`}
                     sources={videoSources}
                     poster={still}
                     title={episodeData.name}
