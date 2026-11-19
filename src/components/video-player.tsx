@@ -91,7 +91,19 @@ export function VideoPlayer({ title, poster, sources, progressKey }: VideoPlayer
   function handleLoadedMetadata() {
     const video = videoRef.current;
     if (!video) return;
-    if (resumeAt > 5 && resumeAt < video.duration - 10) video.currentTime = resumeAt;
+    let savedPosition = resumeAt;
+    if (progressKey) {
+      try {
+        const stored = Number(window.localStorage.getItem(progressKey) ?? 0);
+        if (Number.isFinite(stored) && stored > 5) savedPosition = stored;
+      } catch {
+        // Continue from the beginning when browser storage is unavailable.
+      }
+    }
+    setResumeAt(savedPosition);
+    if (savedPosition > 5 && savedPosition < video.duration - 10) {
+      video.currentTime = savedPosition;
+    }
     setDuration(Number.isFinite(video.duration) ? video.duration : 0);
     setIsLoading(false);
   }
