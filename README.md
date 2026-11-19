@@ -38,14 +38,15 @@ Project link: https://movie-bareng-gan.vercel.app/
 - View episode information, including air dates and runtimes.
 
 ### 🔎 Search
-- Search for movies and TV shows.
+- Unified search for movies and TV shows, with content-type filtering.
 - Retrieve movie information using TMDB.
 - Navigate directly to individual title pages.
 
 ### ▶️ Watch Experience
 - Dedicated movie and TV episode watch pages.
 - Integrated video player interface.
-- Support for multiple video sources.
+- Support for explicitly configured, authorized MP4 and HTTPS embed sources.
+- Per-title playback progress for direct MP4 sources (stored locally in the browser).
 - Streaming availability and playback error handling.
 
 ### 🎨 User Interface
@@ -128,6 +129,9 @@ Create a `.env.local` file in the root directory.
 
 ```env
 TMDB_API_READ_ACCESS_TOKEN=your_tmdb_api_read_access_token
+
+# Optional JSON array of video sources. Only configure content you own or are authorized to distribute.
+MBG_VIDEO_SOURCES_JSON=[]
 ```
 
 You can obtain your API credentials from [The Movie Database (TMDB)](https://www.themoviedb.org/settings/api).
@@ -139,6 +143,27 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## ▶️ Configuring authorized playback
+
+Set `MBG_VIDEO_SOURCES_JSON` in the server environment to a JSON array. A movie entry uses `movieId`; an episode entry uses `showId`, `seasonNumber`, and `episodeNumber`. Each entry requires `id`, `name`, `kind` (`mp4` or `iframe`), `url`, `license`, `attribution`, and `sourcePage`. All URLs must use HTTPS. Example using fictional URLs:
+
+```json
+[
+  {
+    "id": "owned-film-01",
+    "movieId": 12345,
+    "name": "My Licensed Video CDN",
+    "kind": "mp4",
+    "url": "https://media.example.com/film.mp4",
+    "license": "Owned by the project operator",
+    "attribution": "Project media library",
+    "sourcePage": "https://media.example.com/terms"
+  }
+]
+```
+
+For MP4 sources, the player stores resume progress locally in the current browser. Cross-origin iframe players cannot expose reliable playback events unless their provider explicitly supplies a documented messaging API, so the app does not claim to track their progress.
 
 ## 🔑 API Integration
 
@@ -168,7 +193,9 @@ TMDB provides metadata and artwork, not movie files or streaming rights. Video p
 - [x] Movie watch pages.
 - [x] TV episode watch pages.
 - [x] Integrated video player interface.
-- [ ] Improve streaming source availability and reliability.
+- [x] Remove the unverified third-party fallback and require explicit source configuration.
+- [x] Add local resume progress for direct MP4 playback and clarify iframe limitations.
+- [x] Improve unified movie and TV search.
 - [ ] User authentication and profiles.
 - [ ] Personal watchlist and watch history.
 - [ ] Supabase database integration.
@@ -182,7 +209,7 @@ Movie metadata and images are provided by [The Movie Database (TMDB)](https://ww
 
 MovieBarengGan is not affiliated with, endorsed by, or officially associated with TMDB.
 
-Streaming functionality depends on separately configured video sources. Only content that is legally authorized for distribution should be used.
+TMDB supplies metadata, not video streams or distribution rights. MovieBarengGan does not scrape or automatically select third-party streaming sites. Playback is disabled unless an administrator explicitly configures a video source for content they own or are authorized to distribute. Use only HTTPS URLs and include the source name, license/authorization description, attribution, and source information page. The app validates the configuration shape and HTTPS URLs, but configuration does not itself establish legal rights.
 
 ---
 
