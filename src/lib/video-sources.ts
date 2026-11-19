@@ -60,7 +60,15 @@ export function getMovieVideoSources(movieId: number): VideoSource[] {
   if (!Number.isSafeInteger(movieId) || movieId <= 0) return [];
   return getConfiguredSources()
     .filter((source) => source.movieId === movieId)
-    .map(({ movieId: _movieId, showId: _showId, seasonNumber: _season, episodeNumber: _episode, ...source }) => source);
+    .map((source) => ({
+      id: source.id,
+      name: source.name,
+      kind: source.kind,
+      url: source.url,
+      license: source.license,
+      attribution: source.attribution,
+      sourcePage: source.sourcePage,
+    }));
 }
 
 export function getMovieVideoSource(movieId: number): VideoSource | null {
