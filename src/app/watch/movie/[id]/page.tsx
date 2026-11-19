@@ -75,6 +75,7 @@ export default async function WatchMoviePage({
         {/* Video player */}
         {videoSources.length > 0 ? (
           <VideoPlayer
+            progressKey={`mbg:progress:movie:${movie.id}`}
             sources={videoSources}
             poster={movie.backdrop || movie.poster}
             title={movie.title}
